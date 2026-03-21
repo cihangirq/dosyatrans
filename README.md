@@ -10,90 +10,29 @@
 
 ## 📖 İçindekiler
 
-- [Nedir?](#nedir)
-- [Özellikler](#özellikler)
 - [Hızlı Başlangıç](#hızlı-başlangıç)
 - [Kurulum](#kurulum)
+- [Tunnel Seçenekleri](#tunnel-seçenekleri)
 - [Kullanım](#kullanım)
 - [Güvenlik](#güvenlik)
 - [API Referansı](#api-referansı)
-- [Sıkça Sorulan Sorular](#sıkça-sorulan-sorular)
-
----
-
-## Nedir?
-
-DOSYATRANS, AI asistanlarınızın (ChatGPT, Claude, vb.) bilgisayarınızdaki dosyalara güvenli bir şekilde erişmesini sağlayan bir köprü sistemidir.
-
-### Nasıl Çalışır?
-
-```
-┌─────────────────┐         ┌─────────────────┐         ┌─────────────────┐
-│   Bilgisayarınız │ ◄─────► │    Tunnel       │ ◄─────► │   AI Asistan    │
-│  (Bridge Server) │         │ (ngrok/cf tunnel)│         │                 │
-└─────────────────┘         └─────────────────┘         └─────────────────┘
-        │
-        ▼
-┌─────────────────┐
-│   Dosyalarınız   │
-│   C:\, D:\, /    │
-└─────────────────┘
-```
-
-1. **Bridge Server** bilgisayarınızda çalışır
-2. **Tunnel** ile dış dünyaya güvenli açılır
-3. **AI Asistan** tunnel üzerinden bağlanır
-4. Dosyalarınıza erişim sağlanır
-
----
-
-## Özellikler
-
-### 🔒 Güvenlik
-- Token tabanlı kimlik doğrulama
-- İsteğe bağlı klasör erişim kısıtlamaları
-- Tüm işlemler loglanır
-
-### 📁 Dosya İşlemleri
-| İşlem | Açıklama |
-|-------|----------|
-| 📂 List | Dizin içeriklerini listele |
-| 📄 Read | Dosya oku (satır bazlı da desteklenir) |
-| ✏️ Write | Dosya yaz/oluştur |
-| 🗑️ Delete | Dosya/klasör sil |
-| 📁 Mkdir | Klasör oluştur |
-| 📋 Copy | Dosya kopyala |
-| 📦 Move | Dosya taşı |
-| ✏️ Rename | Yeniden adlandır |
-| 🔍 Search | Dosya ara |
-| 📊 Analyze | Proje analizi |
-
-### 🖥️ Platform Desteği
-- ✅ Windows (tüm sürücüler)
-- ✅ macOS
-- ✅ Linux
-
-### 🚀 Performans
-- WebSocket ile gerçek zamanlı iletişim
-- Büyük dosyalar için streaming desteği
-- Verimli dosya arama algoritması
 
 ---
 
 ## Hızlı Başlangıç
 
-### 1. Gereksinimler
-- [Node.js 16+](https://nodejs.org/) kurulu olmalı
-- İnternet bağlantısı (tunnel için)
-
-### 2. İndir ve Kur
+### 1. İndir
 
 ```bash
-# GitHub'dan indir
 git clone https://github.com/cihangirq/dosyatrans.git
 cd dosyatrans
+```
 
-# Bağımlılıkları yükle
+veya ZIP olarak indir: https://github.com/cihangirq/dosyatrans/archive/refs/heads/main.zip
+
+### 2. Kur
+
+```bash
 npm install
 ```
 
@@ -103,109 +42,102 @@ npm install
 npm start
 ```
 
-veya Windows'ta:
-```bash
-start.bat
-```
-
-Linux/macOS'ta:
-```bash
-chmod +x start.sh
-./start.sh
-```
+veya Windows'ta `start.bat` dosyasını çift tıklayın.
 
 ### 4. Tunnel Oluştur
 
-**Ngrok ile:**
+**Önerilen: Cloudflare Tunnel** (Sınırsız, sabit URL)
+
+```bash
+# Otomatik kurulum için:
+install-cloudflared.bat
+
+# Sonra tunnel başlatın:
+start-cloudflared.bat
+```
+
+**Alternatif: Ngrok** (2 saat sınırı, değişen URL)
+
 ```bash
 ngrok http 3001
 ```
 
-**Cloudflare Tunnel ile:**
-```bash
-cloudflared tunnel --url http://localhost:3001
-```
-
 ### 5. AI Asistanına Ver
 
-AI asistanınıza şu bilgileri verin:
-- **Tunnel URL**: `https://abc123.ngrok.io`
+- **Tunnel URL**: `https://xxx.trycloudflare.com` veya `https://xxx.ngrok-free.app`
 - **Token**: `dosyatrans-secure-token-2024`
 
 ---
 
 ## Kurulum
 
-### Detaylı Kurulum
+### Windows
 
-#### Windows
+1. **Node.js Kontrol Et**
+   ```powershell
+   node --version
+   ```
+   Yüklü değilse: https://nodejs.org/ adresinden indirin
 
-```powershell
-# Node.js kontrol et
-node --version
+2. **Projeyi İndir ve Kur**
+   ```powershell
+   git clone https://github.com/cihangirq/dosyatrans.git
+   cd dosyatrans
+   npm install
+   ```
 
-# Eğer yüklü değilse: https://nodejs.org/ adresinden indir
+3. **Başlat**
+   ```powershell
+   start.bat
+   ```
 
-# Projeyi kur
-git clone https://github.com/cihangirq/dosyatrans.git
-cd dosyatrans
-npm install
-npm start
-```
-
-#### macOS
-
-```bash
-# Node.js kontrol et
-node --version
-
-# Homebrew ile Node.js yükle (gerekirse)
-brew install node
-
-# Projeyi kur
-git clone https://github.com/cihangirq/dosyatrans.git
-cd dosyatrans
-npm install
-npm start
-```
-
-#### Linux
+### macOS / Linux
 
 ```bash
 # Node.js kontrol et
 node --version
 
-# nvm ile Node.js yükle (gerekirse)
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
-nvm install 18
-
-# Projeyi kur
+# Proje kur
 git clone https://github.com/cihangirq/dosyatrans.git
 cd dosyatrans
 npm install
-npm start
+
+# Başlat
+chmod +x start.sh
+./start.sh
 ```
 
-### Ortam Değişkenleri
+---
 
-`.env` dosyası oluşturun (`.env.example` dosyasından kopyalayabilirsiniz):
+## Tunnel Seçenekleri
 
-```env
-# Sunucu portu
-PORT=3001
+### 🔵 Cloudflare Tunnel (Önerilen)
 
-# Güvenlik token'ı (DEĞİŞTİRİN!)
-AUTH_TOKEN=benim-gizli-tokenum-123
+| Özellik | Değer |
+|---------|-------|
+| Süre sınırı | ❌ Yok (Sınırsız) |
+| URL sabitliği | ✅ Oturum boyunca sabit |
+| Ücret | Ücretsiz |
+| Kayıt | Gerekli değil (quick tunnel) |
 
-# İzin verilen yollar (opsiyonel, boş = tüm yollar)
-ALLOWED_PATHS=C:\Projects;D:\Work
+**Kurulum:**
 
-# Engellenen yollar (opsiyonel)
-BLOCKED_PATHS=C:\Windows;C:\System
+1. `install-cloudflared.bat` dosyasını çalıştırın
+2. `start-cloudflared.bat` ile tunnel başlatın
+3. Verilen URL'yi AI asistanınıza verin
 
-# Maksimum dosya boyutu (bytes)
-MAX_FILE_SIZE=10485760
-```
+### 🟡 Ngrok (Alternatif)
+
+| Özellik | Free Plan | Ücretli |
+|---------|-----------|---------|
+| Süre sınırı | ⚠️ 2 saat | Sınırsız |
+| URL sabitliği | ❌ Değişiyor | ✅ Sabit |
+| WebSocket | ✅ Çalışıyor | ✅ Çalışıyor |
+
+**Kurulum:**
+
+1. https://ngrok.com/ adresinden indirin
+2. `ngrok http 3001` komutunu çalıştırın
 
 ---
 
@@ -213,38 +145,22 @@ MAX_FILE_SIZE=10485760
 
 ### AI Asistanı ile Kullanım
 
-AI asistanınıza (örneğin ChatGPT veya Claude) şu şekilde istekte bulunabilirsiniz:
+AI asistanınıza şu şekilde istekte bulunun:
 
 ```
-"Tunnel URL: https://abc123.ngrok.io
+Tunnel URL: https://xxx.trycloudflare.com
 Token: dosyatrans-secure-token-2024
 
-C:\Projeler\MyApp klasöründeki projeyi analiz eder misin?"
+D:\Projeler\MyApp klasörünü analiz eder misin?
 ```
 
-AI asistanı:
-1. Tunnel üzerinden bağlanır
-2. Belirtilen klasörü analiz eder
-3. Sonuçları size sunar
+### Örnek İşlemler
 
-### Doğrudan WebSocket Bağlantısı
-
-```javascript
-import { io } from 'socket.io-client';
-
-const socket = io('https://your-tunnel.ngrok.io');
-
-// Kimlik doğrulama
-socket.emit('auth', { token: 'dosyatrans-secure-token-2024' });
-
-// Dosya listesi al
-socket.emit('fs:list', { path: 'C:\\Projects' });
-
-// Sonuçları dinle
-socket.on('fs:list:result', (data) => {
-  console.log('Files:', data.items);
-});
-```
+- ✅ Klasör içeriğini listeleme
+- ✅ Dosya okuma ve düzenleme
+- ✅ Proje analizi
+- ✅ Dosya arama
+- ✅ Yeni dosya oluşturma
 
 ---
 
@@ -253,37 +169,22 @@ socket.on('fs:list:result', (data) => {
 ### ⚠️ Önemli Uyarılar
 
 1. **Token'ı Değiştirin!**
-   Varsayılan token güvenli değildir. Mutlaka değiştirin.
+   
+   `.env` dosyası oluşturun:
+   ```env
+   AUTH_TOKEN=benim-gizli-tokenum-123
+   ```
 
 2. **Tunnel'ı Kapatın**
-   Kullanmadığınızda tunnel'ı kapatın.
+   
+   Kullanmadığınızda terminali kapatın.
 
-3. **Güvenilir AI ile Çalışın**
-   Sadece güvendiğiniz AI asistanlarına erişim verin.
-
-4. **Klasör Kısıtlamaları Kullanın**
-   Hassas klasörlere erişimi engelleyin.
-
-### Token Değiştirme
-
-```bash
-# Ortam değişkeni ile
-AUTH_TOKEN="cok-gizli-token-456" npm start
-
-# Veya .env dosyasında
-echo "AUTH_TOKEN=cok-gizli-token-456" > .env
-npm start
-```
-
-### Klasör Erişim Kısıtlamaları
-
-```env
-# Sadece belirli klasörlere erişim
-ALLOWED_PATHS=C:\Projects;D:\Work
-
-# Belirli klasörleri engelle
-BLOCKED_PATHS=C:\Windows;C:\Users\Admin
-```
+3. **Klasör Kısıtlamaları**
+   
+   ```env
+   ALLOWED_PATHS=D:\Projeler;D:\Work
+   BLOCKED_PATHS=C:\Windows;C:\System
+   ```
 
 ---
 
@@ -300,98 +201,72 @@ BLOCKED_PATHS=C:\Windows;C:\Users\Admin
 
 ### WebSocket Events
 
-#### Auth
+| Event | Açıklama |
+|-------|----------|
+| `auth` | Kimlik doğrulama |
+| `fs:list` | Dizin listele |
+| `fs:read` | Dosya oku |
+| `fs:write` | Dosya yaz |
+| `fs:delete` | Dosya sil |
+| `fs:search` | Dosya ara |
+| `fs:analyze` | Proje analiz et |
+| `fs:mkdir` | Klasör oluştur |
+| `fs:copy` | Dosya kopyala |
+| `fs:move` | Dosya taşı |
+| `fs:rename` | Yeniden adlandır |
+
+### Örnek Kullanım
+
 ```javascript
-// İstek
+import { io } from 'socket.io-client';
+
+const socket = io('https://your-tunnel-url');
+
+// Kimlik doğrulama
 socket.emit('auth', { token: 'your-token' });
 
-// Başarılı yanıt
-socket.on('auth:success', (data) => {
-  // data: { platform, rootPath, drives, serverVersion }
-});
+// Dosya listele
+socket.emit('fs:list', { path: 'D:\\Projects' });
 
-// Başarısız yanıt
-socket.on('auth:failed', (data) => {
-  // data: { error }
-});
-```
-
-#### List Directory
-```javascript
-socket.emit('fs:list', { path: 'C:\\Projects' });
+// Sonuç al
 socket.on('fs:list:result', (data) => {
-  // data: { path, items[], totalItems }
+  console.log(data.items);
 });
 ```
 
-#### Read File
-```javascript
-socket.emit('fs:read', { 
-  path: 'C:\\Projects\\file.txt',
-  encoding: 'utf8',
-  startLine: 1,    // Opsiyonel
-  endLine: 100     // Opsiyonel
-});
-socket.on('fs:read:result', (data) => {
-  // data: { path, content, size, encoding }
-});
-```
+---
 
-#### Write File
-```javascript
-socket.emit('fs:write', { 
-  path: 'C:\\Projects\\new.txt',
-  content: 'Hello World',
-  mode: 'write' // veya 'append'
-});
-socket.on('fs:write:result', (data) => {
-  // data: { path, size, success }
-});
-```
+## Dosya Yapısı
 
-#### Search
-```javascript
-socket.emit('fs:search', { 
-  path: 'C:\\Projects',
-  pattern: 'test',
-  fileType: '.js',
-  maxDepth: 5,
-  maxResults: 100
-});
-socket.on('fs:search:result', (data) => {
-  // data: { results[], totalResults }
-});
 ```
-
-#### Analyze Project
-```javascript
-socket.emit('fs:analyze', { 
-  path: 'C:\\Projects\\MyApp',
-  depth: 3
-});
-socket.on('fs:analyze:result', (data) => {
-  // data: { projectTypes, files, directories, suggestions }
-});
+dosyatrans/
+├── server.js              → Ana sunucu
+├── package.json           → Bağımlılıklar
+├── start.bat              → Windows başlatma
+├── start.sh               → Linux/macOS başlatma
+├── install-cloudflared.bat→ Cloudflared kurulum
+├── start-cloudflared.bat  → Cloudflared tunnel başlat
+├── .env.example           → Örnek ortam değişkenleri
+├── .gitignore             → Git ignore
+├── LICENSE                → MIT Lisans
+└── README.md              → Bu dosya
 ```
 
 ---
 
 ## Sıkça Sorulan Sorular
 
-### Ngrok bağlantım sürekli kesiliyor?
-Ngrok ücretsiz planda bağlantı süresi sınırlıdır. Yeniden başlatın veya ücretli plan kullanın.
+### Ngrok mu Cloudflare mi?
+**Cloudflare** önerilir. Sınırsız süre ve daha stabil.
 
-### "Path not allowed" hatası alıyorum?
-`ALLOWED_PATHS` veya `BLOCKED_PATHS` ayarlarını kontrol edin.
+### Bağlantı kesilirse ne yapmalıyım?
+Tunnel'ı yeniden başlatın ve yeni URL'yi AI'a verin.
 
 ### Birden fazla AI bağlanabilir mi?
 Evet, birden fazla istemci aynı anda bağlanabilir.
 
-### Dosya boyutu sınırlaması var mı?
-Varsayılan olarak 10MB. `MAX_FILE_SIZE` ile değiştirebilirsiniz.
-
-### Windows dışında çalışır mı?
-Evet, macOS ve Linux'ta da çalışır.
+### Dosya boyutu sınırı var mı?
+Varsayılan 10MB. `.env` dosyasında `MAX_FILE_SIZE` ile değiştirin.
 
 ---
 
@@ -401,19 +276,9 @@ MIT License - Detaylar için [LICENSE](LICENSE) dosyasına bakın.
 
 ---
 
-## Katkıda Bulunma
-
-1. Fork yapın
-2. Feature branch oluşturun (`git checkout -b feature/amazing`)
-3. Commit yapın (`git commit -m 'Add amazing feature'`)
-4. Push yapın (`git push origin feature/amazing`)
-5. Pull Request açın
-
----
-
 ## İletişim
 
-Sorularınız için GitHub Issues kullanabilirsiniz.
+GitHub: https://github.com/cihangirq/dosyatrans
 
 ---
 
