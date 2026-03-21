@@ -90,7 +90,7 @@ DOSYATRANS, AI asistanlarınızın (ChatGPT, Claude, vb.) bilgisayarınızdaki d
 
 ```bash
 # GitHub'dan indir
-git clone https://github.com/yourusername/dosyatrans.git
+git clone https://github.com/cihangirq/dosyatrans.git
 cd dosyatrans
 
 # Bağımlılıkları yükle
@@ -101,6 +101,17 @@ npm install
 
 ```bash
 npm start
+```
+
+veya Windows'ta:
+```bash
+start.bat
+```
+
+Linux/macOS'ta:
+```bash
+chmod +x start.sh
+./start.sh
 ```
 
 ### 4. Tunnel Oluştur
@@ -136,7 +147,7 @@ node --version
 # Eğer yüklü değilse: https://nodejs.org/ adresinden indir
 
 # Projeyi kur
-git clone https://github.com/yourusername/dosyatrans.git
+git clone https://github.com/cihangirq/dosyatrans.git
 cd dosyatrans
 npm install
 npm start
@@ -152,7 +163,7 @@ node --version
 brew install node
 
 # Projeyi kur
-git clone https://github.com/yourusername/dosyatrans.git
+git clone https://github.com/cihangirq/dosyatrans.git
 cd dosyatrans
 npm install
 npm start
@@ -169,7 +180,7 @@ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
 nvm install 18
 
 # Projeyi kur
-git clone https://github.com/yourusername/dosyatrans.git
+git clone https://github.com/cihangirq/dosyatrans.git
 cd dosyatrans
 npm install
 npm start
@@ -177,7 +188,7 @@ npm start
 
 ### Ortam Değişkenleri
 
-`.env` dosyası oluşturun:
+`.env` dosyası oluşturun (`.env.example` dosyasından kopyalayabilirsiniz):
 
 ```env
 # Sunucu portu
@@ -215,15 +226,6 @@ AI asistanı:
 1. Tunnel üzerinden bağlanır
 2. Belirtilen klasörü analiz eder
 3. Sonuçları size sunar
-
-### Dashboard ile Kullanım
-
-Demo dashboard'u kullanarak dosyalarınızı tarayabilirsiniz:
-
-1. Demo servisi başlatın
-2. Dashboard'u açın
-3. Tunnel URL ve token girin
-4. Bağlan butonuna tıklayın
 
 ### Doğrudan WebSocket Bağlantısı
 
