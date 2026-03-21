@@ -7,12 +7,24 @@ echo  ================================================
 echo         DOSYATRANS - AI File Bridge
 echo  ================================================
 echo.
-echo  [1/3] Sunucu baslatiliyor...
+
+:: Sunucu baslat
+echo [1/3] Sunucu baslatiliyor...
 start /b "" node server.js
 
-echo  [2/3] Tunnel olusturuluyor...
-timeout /t 2 /nobreak >nul
+:: Bekle
+timeout /t 3 /nobreak >nul
+
+:: Arayuzu ac
+echo [2/3] Arayuz aciliyor...
+start "" "arayuz.html"
 
 :: Tunnel baslat
-cloudflared.exe tunnel --url http://localhost:3001
+echo [3/3] Tunnel baslatiliyor...
+echo.
+echo  ================================================
+echo  ASAGIDAKI URL'I KOPYALAYIN:
+echo  ================================================
+echo.
 
+cloudflared.exe tunnel --url http://localhost:3001
