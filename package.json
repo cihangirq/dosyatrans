@@ -1,18 +1,19 @@
 {
   "name": "dosyatrans",
-  "version": "1.0.0",
-  "description": "AI File Bridge - AI asistanınızın bilgisayarınızdaki dosyalara uzaktan erişmesini sağlayan köprü sistemi",
+  "version": "3.0.0",
+  "description": "AI File Bridge - AI asistaninizin bilgisayarinizdaki dosyalara uzaktan erismesini saglayan kopru sistemi",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js"
   },
   "dependencies": {
-    "socket.io": "^4.7.2",
-    "express": "^4.18.2",
     "cors": "^2.8.5",
-    "uuid": "^9.0.0",
-    "mime-types": "^2.1.35"
+    "express": "^4.18.2",
+    "mime-types": "^2.1.35",
+    "socket.io": "^4.7.2",
+    "socket.io-client": "^4.8.3",
+    "uuid": "^9.0.0"
   },
   "keywords": [
     "ai",
@@ -20,7 +21,9 @@
     "remote-access",
     "websocket",
     "file-transfer",
-    "ai-assistant"
+    "ai-assistant",
+    "cloudflare-tunnel",
+    "socket.io"
   ],
   "author": "DOSYATRANS",
   "license": "MIT",

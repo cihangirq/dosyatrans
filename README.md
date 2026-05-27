@@ -1,129 +1,152 @@
-# 🌉 DOSYATRANS - AI File Bridge
+# DOSYATRANS v3.0 - AI File Bridge
 
-**AI asistanınızın bilgisayarınızdaki dosyalara uzaktan erişmesini sağlayan köprü sistemi.**
+**AI asistaninizin bilgisayarinizdaki dosyalara uzaktan erismesini saglayan kopru sistemi.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-16%2B-green.svg)](https://nodejs.org/)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-blue.svg)]()
+[![Version](https://img.shields.io/badge/Version-3.0-blue.svg)]()
 
 ---
 
-## 🚀 Hızlı Başlangıç
+## Hizli Baslangic
 
 ### Zaten Kuruluysa
 
-1. **baslat.bat** dosyasını çift tıklayın
-2. Terminal açılır ve tunnel başlar
-3. Arayüz otomatik açılır
-4. URL'i kutuya yapıştırın
-5. **"Hazır Mesajı Kopyala"** butonuna basın
-6. AI sohbetine yapıştırın → Bitti!
+1. **baslat.bat** dosyasini cift tiklayin
+2. Sunucu + Cloudflare Tunnel otomatik baslar
+3. Arayuz otomatik acilir (http://localhost:3001)
+4. Tunnel URL otomatik algilanir
+5. **"Hazir Mesaji Kopyala"** butonuna basin
+6. AI sohbetine yapistirin - Bitti!
 
-### Yeni Bilgisayar İçin Kurulum
+### Yeni Bilgisayar Icin Kurulum
 
-1. **kur.bat** dosyasını indirin ve çalıştırın
-2. Her şey otomatik kurulur:
-   - ✅ Node.js
-   - ✅ Proje dosyaları (GitHub'dan)
-   - ✅ Cloudflared
-3. **baslat.bat** ile sistemi başlatın
+1. **kur.bat** dosyasini indirin ve calistirin (yonetici olarak)
+2. Her sey otomatik kurulur:
+   - Node.js (JavaScript calistirma ortami)
+   - Cloudflared (Cloudflare Tunnel - internet erisimi)
+   - Proje dosyalari (GitHub'dan)
+   - npm bagimliliklari
+3. **baslat.bat** ile sistemi baslatin
 
 ---
 
-## 📁 Dosya Yapısı
+## v3.0 Yenilikler
+
+| Ozellik | Aciklama |
+|---------|----------|
+| Otomatik Tunnel | Cloudflared baslat.bat ile otomatik baslar |
+| Tunnel URL Algılama | Socket.IO ile URL otomatik arayuze gonderilir |
+| Web Arayuzu | http://localhost:3001 adresinde glass-morphism tasarim |
+| Terminal Desteği | Uzak komut calistirma (PowerShell/cmd.exe fix) |
+| Batch Islemler | Birden fazla dosya islemi tek istekte |
+| Dosya Duzenleme | Mevcut dosyalarda metin degistirme |
+| Dosya Izleme | Klasor degisikliklerini gercek zamanli izleme |
+| Stream Okuma | Buyuk dosyalar icin parcali okuma |
+
+---
+
+## Dosya Yapisi
 
 ```
 dosyatrans/
-├── baslat.bat       ← ANA DOSYA (bunu çalıştırın)
-├── arayuz.html      ← Arayüz (otomatik açılır)
-├── kur.bat          ← Yeni bilgisayar kurulumu
-├── server.js        ← Sunucu
-├── package.json     ← Bağımlılıklar
-├── cloudflared.exe  ← Tunnel (otomatik indirilir)
-└── .env.example     ← Örnek ayarlar
+├── baslat.bat           ← ANA DOSYA (bunu calistirin)
+├── kur.bat              ← Yeni bilgisayar kurulumu
+├── yeniden_baslat.bat   ← Sunucuyu yeniden baslat
+├── arayuz.html          ← Web arayuzu (otomatik acilir)
+├── server.js            ← Sunucu (v3.0)
+├── package.json         ← Bagimliliklar
+├── .env.example         ← Ornek ayarlar
+├── cloudflared.exe      ← Tunnel (kur.bat ile iner)
+└── README.md            ← Bu dosya
 ```
 
 ---
 
-## 🎯 Kullanım
+## Kullanım
 
-### 1. Sistemi Başlatın
+### 1. Sistemi Baslatin
 ```
-baslat.bat dosyasını çift tıklayın
+baslat.bat dosyasini cift tiklayin
 ```
 
-### 2. Tunnel URL'i Alın
-- Terminal'de `trycloudflare.com` ile biten URL görünür
-- Bu URL'i arayüzdeki kutuya yapıştırın
+### 2. Tunnel URL Alin
+- Cloudflare Tunnel otomatik baslar
+- Tunnel URL otomatik olarak arayuzde gorunur
+- Manuel olarak da gorebilirsiniz: Terminalde trycloudflare.com URL
 
 ### 3. AI'a Bilgi Verin
-- "Hazır Mesajı Kopyala" butonuna basın
-- AI sohbetine yapıştırın
+- "Hazir Mesaji Kopyala" butonuna basin
+- AI sohbetine yapistirin
 
 ---
 
-## ⚡ Özellikler
+## Ozellikler
 
-| Özellik | Açıklama |
-|---------|----------|
-| 🚀 Tek Tık | baslat.bat ile her şey hazır |
-| 🌐 Arayüz | Kopyalanabilir hazır mesaj |
-| 📦 Otomatik Kurulum | kur.bat ile her şey kurulur |
-| ☁️ Cloudflare Tunnel | Sınırsız, ücretsiz |
-| 🔄 Gerçek Zamanlı | WebSocket ile anlık erişim |
-
----
-
-## 📋 Yapabilecekleriniz
-
-| İşlem | Açıklama |
-|-------|----------|
-| 📂 Klasör Listeleme | Dizin içeriklerini görme |
-| 📄 Dosya Okuma | Dosya içeriğini okuma |
-| ✏️ Dosya Yazma | Dosya oluşturma/düzenleme |
-| 🗑️ Silme | Dosya/klasör silme |
-| 🔍 Arama | Dosya arama |
-| 📊 Analiz | Proje analizi |
+| Islemler | Aciklama |
+|----------|----------|
+| Klasor Listeleme | Dizin iceriklerini gorme |
+| Dosya Okuma | Dosya icerigini okuma |
+| Dosya Yazma | Dosya olusturma/duzenleme |
+| Dosya Silme | Dosya/klasor silme |
+| Dosya Arama | Isim veya uzanti ile arama |
+| Proje Analizi | Proje yapisini ve turunu analiz etme |
+| Dosya Kopyalama | Dosya kopyalama |
+| Dosya Tasima | Dosya tasima/yeniden adlandirma |
+| Batch Islemler | Birden fazla islem tek istekte |
+| Dosya Duzenleme | Metin degistirme (find & replace) |
+| Stream Okuma | Buyuk dosyalar icin parcali okuma |
+| Dosya Izleme | Degisiklikleri gercek zamanli izleme |
+| Terminal | Uzak komut calistirma |
 
 ---
 
-## 🔒 Güvenlik
+## Guvenlik
 
-### Token Değiştirme
+### Token Degistirme
 
-`.env` dosyası oluşturun:
+`.env` dosyasi olusturun:
 ```env
 AUTH_TOKEN=benim-gizli-tokenum-123
 ```
 
-### Klasör Kısıtlamaları
+### Klasor Kisitlamalari
 ```env
 ALLOWED_PATHS=D:\Projeler;D:\Work
 BLOCKED_PATHS=C:\Windows;C:\System
 ```
 
----
-
-## ❓ SSS
-
-### Tunnel URL değişti mi?
-Her oturumda yeni URL verilir. Arayüzden güncel URL'i alıp AI'a verin.
-
-### Başka bilgisayara nasıl kurarım?
-`kur.bat` dosyasını çalıştırın, her şey otomatik kurulur.
-
-### Bağlantı kesilirse?
-`baslat.bat` dosyasını tekrar çalıştırın.
-
-### Cloudflare Tunnel ücretsiz mi?
-Evet, tamamen ücretsiz ve sınırsız.
+### Tunnel Ayarlari
+```env
+# Cloudflared otomatik baslatmayi kapat
+AUTO_START_CLOUDFLARED=false
+```
 
 ---
 
-## 📖 GitHub
+## SSS
+
+### Tunnel URL degisti mi?
+Her oturumda yeni URL verilir. Arayuzden guncel URL'i alip AI'a verin.
+
+### Baska bilgisayara nasil kurarim?
+`kur.bat` dosyasini yonetici olarak calistirin, her sey otomatik kurulur.
+
+### Baglanti kesilirse?
+`yeniden_baslat.bat` dosyasini calistirin.
+
+### Cloudflare Tunnel ucretsiz mi?
+Evet, tamamen ucretsiz ve sinirsiz.
+
+### Cloudflared nereye indirilir?
+`kur.bat` calistirildiginda `cloudflared.exe` proje klasorune otomatik indirilir.
+
+---
+
+## GitHub
 
 https://github.com/cihangirq/dosyatrans
 
 ---
 
-**Made with ❤️ for AI-Human Collaboration**
+**Made with love for AI-Human Collaboration**

@@ -42,7 +42,18 @@ build/
 coverage/
 .nyc_output/
 
+# Cloudflared binary (large file)
+cloudflared.exe
+cloudflared
+
 # Misc
 .cache/
 .temp/
 .tmp/
+
+# Test scripts (not needed in production)
+*-test.js
+combined-test.js
+deep-edge-test.js
+test-suite.js
+v2-test.js

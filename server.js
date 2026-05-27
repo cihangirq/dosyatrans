@@ -1,21 +1,23 @@
 /**
  * ╔═══════════════════════════════════════════════════════════════════════════╗
- * ║                           DOSYATRANS                                       ║
- * ║                     AI File Bridge Server                                  ║
+ * ║                           DOSYATRANS v3.0                                ║
+ * ║                     AI File Bridge Server                                ║
  * ║                                                                           ║
- * ║  Bu sunucu bilgisayarınızdaki dosyalara uzaktan erişim sağlar.            ║
- * ║  AI asistanınızın dosya okuma, yazma, analiz işlemlerini                  ║
- * ║  gerçekleştirmesine olanak tanır.                                         ║
+ * ║  Bu sunucu bilgisayarinizdaki dosyalara uzaktan erisim saglar.           ║
+ * ║  AI asistaninizin dosya okuma, yazma, analiz islemlerini                 ║
+ * ║  gerceklestirmesine olanak tanir.                                        ║
+ * ║                                                                           ║
+ * ║  v3.0 Yenilikler:                                                        ║
+ * ║  - Cloudflared otomatik baslatma ve tunnel URL algilama                  ║
+ * ║  - Web arayuzu otomatik servis ediliyor                                   ║
+ * ║  - Terminal komut calistirma (resolveShell ile PATH fix)                  ║
+ * ║  - Dosya batch/edit/stream islemleri                                      ║
  * ╚═══════════════════════════════════════════════════════════════════════════╝
  * 
  * KULLANIM:
- *   npm install    - Bağımlılıkları yükle
- *   npm start      - Sunucuyu başlat
- * 
- * TUNNEL OLUŞTURMA:
- *   ngrok http 3001
- *   veya
- *   cloudflared tunnel --url http://localhost:3001
+ *   baslat.bat    - Her seyi otomatik baslat
+ *   npm install   - Bagimliliklari yukle
+ *   npm start     - Sunucuyu baslat
  */
 
 const express = require('express');
@@ -25,37 +27,28 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const { spawn } = require('child_process');
 const mime = require('mime-types');
 
 // ═══════════════════════════════════════════════════════════════════════════
-// KONFİGÜRASYON
+// KONFIGURASYON
 // ═══════════════════════════════════════════════════════════════════════════
 
 const CONFIG = {
-  // Sunucu portu
   PORT: process.env.PORT || 3001,
-  
-  // Güvenlik token'ı - BURAYI DEĞİŞTİRİN!
   AUTH_TOKEN: process.env.AUTH_TOKEN || 'dosyatrans-secure-token-2024',
-  
-  // Platform algılama
   PLATFORM: process.platform,
   ROOT_PATH: process.platform === 'win32' 
     ? process.cwd().split(path.sep)[0] + path.sep 
     : '/',
-  
-  // İzin verilen yollar (boş = tüm yollar erişilebilir)
   ALLOWED_PATHS: process.env.ALLOWED_PATHS 
     ? process.env.ALLOWED_PATHS.split(';') 
     : [],
-  
-  // Engellenecek yollar
   BLOCKED_PATHS: process.env.BLOCKED_PATHS 
     ? process.env.BLOCKED_PATHS.split(';') 
     : [],
-  
-  // Maksimum dosya okuma boyutu (bytes)
-  MAX_FILE_SIZE: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024, // 10MB
+  MAX_FILE_SIZE: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024,
+  AUTO_START_CLOUDFLARED: process.env.AUTO_START_CLOUDFLARED !== 'false',
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -73,41 +66,41 @@ const io = new Server(server, {
     origin: '*',
     methods: ['GET', 'POST']
   },
-  maxHttpBufferSize: 50e6 // 50MB
+  maxHttpBufferSize: 50e6
 });
 
-// Bağlı istemciler
+// Bagli istemciler
 const connectedClients = new Map();
 
+// Tunnel URL (cloudflared'dan alinir)
+let tunnelUrl = null;
+
 // ═══════════════════════════════════════════════════════════════════════════
-// YARDIMCI FONKSİYONLAR
+// YARDIMCI FONKSIYONLAR
 // ═══════════════════════════════════════════════════════════════════════════
 
 /**
- * Token doğrulama
+ * Token dogrulama
  */
 function validateToken(token) {
   return token === CONFIG.AUTH_TOKEN;
 }
 
 /**
- * Yol güvenlik kontrolü
+ * Yol guvenlik kontrolu
  */
 function isPathAllowed(targetPath) {
   try {
     const resolved = path.resolve(targetPath);
     
-    // Engellenen yolları kontrol et
     for (const blocked of CONFIG.BLOCKED_PATHS) {
       if (resolved.toLowerCase().startsWith(blocked.toLowerCase())) {
         return false;
       }
     }
     
-    // İzin verilen yollar boşsa, tüm yollar erişilebilir
     if (CONFIG.ALLOWED_PATHS.length === 0) return true;
     
-    // İzin verilen yolları kontrol et
     for (const allowed of CONFIG.ALLOWED_PATHS) {
       if (resolved.toLowerCase().startsWith(allowed.toLowerCase())) {
         return true;
@@ -143,7 +136,7 @@ function getStats(itemPath) {
 }
 
 /**
- * Sürücüleri listele
+ * Suruculeri listele
  */
 function getDrives() {
   if (CONFIG.PLATFORM === 'win32') {
@@ -153,48 +146,26 @@ function getDrives() {
       try {
         fs.accessSync(drive, fs.constants.R_OK);
         drives.push({ name: drive, path: drive });
-      } catch (e) {
-        // Sürücü yok veya erişilemez
-      }
+      } catch (e) {}
     }
     return drives;
   } else {
-    // Linux/macOS için
     return [{ name: 'Root', path: '/' }];
   }
 }
 
 /**
- * Proje türünü algıla
+ * Proje turunu algila
  */
 function detectProjectType(dirPath) {
-  const indicators = {
-    'Next.js': ['next.config.js', 'next.config.mjs', 'next.config.ts'],
-    'React': ['package.json'],
-    'Vue.js': ['vue.config.js', 'vite.config.js'],
-    'Angular': ['angular.json'],
-    'Node.js': ['package.json'],
-    'Python': ['requirements.txt', 'setup.py', 'pyproject.toml', 'Pipfile'],
-    'Java/Maven': ['pom.xml'],
-    'Java/Gradle': ['build.gradle', 'build.gradle.kts'],
-    'C#/.NET': ['.csproj', '.sln'],
-    'Go': ['go.mod'],
-    'Rust': ['Cargo.toml'],
-    'PHP/Laravel': ['composer.json', 'artisan'],
-    'Ruby/Rails': ['Gemfile', 'config/application.rb'],
-    'Django': ['manage.py', 'settings.py'],
-  };
-  
   try {
     const files = fs.readdirSync(dirPath);
     const projectTypes = [];
     
-    // Next.js kontrolü
     if (files.some(f => f.startsWith('next.config'))) {
       projectTypes.push('Next.js');
     }
     
-    // package.json varsa detaylı kontrol
     if (files.includes('package.json')) {
       try {
         const pkgPath = path.join(dirPath, 'package.json');
@@ -220,7 +191,6 @@ function detectProjectType(dirPath) {
       }
     }
     
-    // Diğer kontroller
     if (files.includes('requirements.txt') || files.includes('pyproject.toml')) {
       projectTypes.push('Python');
     }
@@ -256,22 +226,166 @@ function detectProjectType(dirPath) {
 }
 
 /**
- * Log yazdır
+ * Log yazdir
  */
 function log(type, message, details = null) {
   const timestamp = new Date().toISOString();
   const prefix = {
-    'info': '📋',
-    'success': '✅',
-    'error': '❌',
-    'warning': '⚠️',
-    'connect': '🔗',
-    'disconnect': '🔌'
-  }[type] || '📝';
+    'info': 'INFO',
+    'success': 'OK',
+    'error': 'ERR',
+    'warning': 'WARN',
+    'connect': 'CONN',
+    'disconnect': 'DISC',
+    'tunnel': 'TUNNEL'
+  }[type] || 'LOG';
   
-  console.log(`${prefix} [${timestamp}] ${message}`);
+  console.log(`[${timestamp}] [${prefix}] ${message}`);
   if (details) {
     console.log('   Details:', typeof details === 'object' ? JSON.stringify(details, null, 2) : details);
+  }
+}
+
+/**
+ * Shell yolunu cozumle - Windows PATH sorununu gider
+ * cmd.exe veya PowerShell yolunu tam olarak bulur
+ */
+function resolveShell() {
+  if (CONFIG.PLATFORM === 'win32') {
+    // PowerShell yolunu bul
+    const psPaths = [
+      'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
+      'C:\\Windows\\SysWOW64\\WindowsPowerShell\\v1.0\\powershell.exe',
+      process.env.SystemRoot + '\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
+    ];
+    
+    for (const psPath of psPaths) {
+      try {
+        if (fs.existsSync(psPath)) {
+          return { shell: psPath, type: 'powershell' };
+        }
+      } catch (e) {}
+    }
+    
+    // cmd.exe yolunu bul
+    const cmdPaths = [
+      'C:\\Windows\\System32\\cmd.exe',
+      'C:\\Windows\\SysWOW64\\cmd.exe',
+      process.env.SystemRoot + '\\System32\\cmd.exe',
+    ];
+    
+    for (const cmdPath of cmdPaths) {
+      try {
+        if (fs.existsSync(cmdPath)) {
+          return { shell: cmdPath, type: 'cmd' };
+        }
+      } catch (e) {}
+    }
+    
+    // Fallback
+    return { shell: 'powershell.exe', type: 'powershell' };
+  } else {
+    return { shell: '/bin/bash', type: 'bash' };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CLOUDFLARED TUNNEL YONETIMI
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Cloudflared tunnel baslat ve URL algila
+ */
+function startCloudflared() {
+  if (!CONFIG.AUTO_START_CLOUDFLARED) {
+    log('info', 'Cloudflared otomatik baslatma devre disi');
+    return;
+  }
+
+  // cloudflared.exe yolunu bul
+  const possiblePaths = [
+    path.join(__dirname, 'cloudflared.exe'),
+    path.join(__dirname, 'cloudflared'),
+    'cloudflared',
+    'cloudflared.exe'
+  ];
+  
+  let cloudflaredPath = null;
+  for (const p of possiblePaths) {
+    try {
+      if (fs.existsSync(p)) {
+        cloudflaredPath = p;
+        break;
+      }
+    } catch (e) {}
+  }
+  
+  // Windows'ta PATH'ten de arayalim
+  if (!cloudflaredPath && CONFIG.PLATFORM === 'win32') {
+    cloudflaredPath = 'cloudflared.exe';
+  } else if (!cloudflaredPath) {
+    cloudflaredPath = 'cloudflared';
+  }
+
+  log('tunnel', `Cloudflared baslatiliyor: ${cloudflaredPath}`);
+
+  try {
+    const cloudflared = spawn(cloudflaredPath, ['tunnel', '--url', `http://localhost:${CONFIG.PORT}`], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      shell: CONFIG.PLATFORM === 'win32'
+    });
+
+    let urlDetected = false;
+
+    cloudflared.stdout.on('data', (data) => {
+      const output = data.toString();
+      // Tunnel URL'sini algila
+      const urlMatch = output.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
+      if (urlMatch && !urlDetected) {
+        tunnelUrl = urlMatch[0];
+        urlDetected = true;
+        log('tunnel', `Tunnel URL algilandi: ${tunnelUrl}`);
+        
+        // Tum bagli istemcilere tunnel URL'i gonder
+        io.emit('tunnel-url', { url: tunnelUrl, token: CONFIG.AUTH_TOKEN });
+      }
+    });
+
+    cloudflared.stderr.on('data', (data) => {
+      const output = data.toString();
+      // cloudflared URL'yi stderr'a da yazabilir
+      const urlMatch = output.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
+      if (urlMatch && !urlDetected) {
+        tunnelUrl = urlMatch[0];
+        urlDetected = true;
+        log('tunnel', `Tunnel URL algilandi: ${tunnelUrl}`);
+        
+        io.emit('tunnel-url', { url: tunnelUrl, token: CONFIG.AUTH_TOKEN });
+      }
+    });
+
+    cloudflared.on('error', (error) => {
+      log('error', `Cloudflared baslatma hatasi: ${error.message}`);
+      log('warning', 'Cloudflared baslatilamadi. Manuel tunnel baslatabilirsiniz:');
+      log('warning', `  cloudflared tunnel --url http://localhost:${CONFIG.PORT}`);
+    });
+
+    cloudflared.on('close', (code) => {
+      log('warning', `Cloudflared kapatildi (kod: ${code})`);
+      tunnelUrl = null;
+    });
+
+    // 10 saniye sonra hala URL algilanmadiysa uyari ver
+    setTimeout(() => {
+      if (!urlDetected) {
+        log('warning', 'Tunnel URL 10 saniye icinde algilanamadi.');
+        log('warning', 'Cloudflared henuz baslamamis olabilir veya kurulu degil.');
+        log('warning', 'kur.bat calistirarak cloudflared kurabilirsiniz.');
+      }
+    }, 10000);
+
+  } catch (error) {
+    log('error', `Cloudflared baslatma hatasi: ${error.message}`);
   }
 }
 
@@ -279,37 +393,43 @@ function log(type, message, details = null) {
 // HTTP ENDPOINTS
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Ana sayfa - Durum bilgisi
+// Ana sayfa - Arayuz HTML servis et
 app.get('/', (req, res) => {
-  res.json({
-    name: 'DOSYATRANS - AI File Bridge Server',
-    version: '1.0.0',
-    status: 'running',
-    platform: CONFIG.PLATFORM,
-    port: CONFIG.PORT,
-    connectedClients: connectedClients.size,
-    uptime: process.uptime(),
-    timestamp: new Date().toISOString(),
-    documentation: 'https://github.com/yourusername/dosyatrans'
-  });
+  const arayuzPath = path.join(__dirname, 'arayuz.html');
+  if (fs.existsSync(arayuzPath)) {
+    res.sendFile(arayuzPath);
+  } else {
+    res.json({
+      name: 'DOSYATRANS - AI File Bridge Server',
+      version: '3.0.0',
+      status: 'running',
+      platform: CONFIG.PLATFORM,
+      port: CONFIG.PORT,
+      tunnelUrl: tunnelUrl,
+      connectedClients: connectedClients.size,
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
-// Sağlık kontrolü
+// Saglik kontrolu
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'healthy', 
     uptime: process.uptime(),
     memory: process.memoryUsage(),
+    tunnelUrl: tunnelUrl,
     timestamp: new Date().toISOString()
   });
 });
 
-// Sürücüleri listele (HTTP)
+// Suruculeri listele (HTTP)
 app.get('/drives', (req, res) => {
   res.json({ drives: getDrives() });
 });
 
-// Token doğrulama (HTTP)
+// Token dogrulama (HTTP)
 app.post('/auth', (req, res) => {
   const { token } = req.body;
   if (validateToken(token)) {
@@ -317,11 +437,21 @@ app.post('/auth', (req, res) => {
       success: true, 
       platform: CONFIG.PLATFORM,
       rootPath: CONFIG.ROOT_PATH,
-      drives: getDrives()
+      drives: getDrives(),
+      tunnelUrl: tunnelUrl
     });
   } else {
     res.status(401).json({ success: false, error: 'Invalid token' });
   }
+});
+
+// Tunnel URL endpoint (HTTP)
+app.get('/tunnel-url', (req, res) => {
+  res.json({ 
+    url: tunnelUrl, 
+    token: CONFIG.AUTH_TOKEN,
+    active: tunnelUrl !== null 
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -329,11 +459,16 @@ app.post('/auth', (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 io.on('connection', (socket) => {
-  log('connect', `Yeni bağlantı: ${socket.id}`);
+  log('connect', `Yeni baglanti: ${socket.id}`);
   let isAuthenticated = false;
   let clientInfo = {};
   
-  // ═══ AUTH - Kimlik Doğrulama ═══
+  // Dogrulanmamis istemciye tunnel URL gonder
+  if (tunnelUrl) {
+    socket.emit('tunnel-url', { url: tunnelUrl, token: CONFIG.AUTH_TOKEN });
+  }
+  
+  // ═══ AUTH - Kimlik Dogrulama ═══
   socket.on('auth', (data) => {
     if (validateToken(data.token)) {
       isAuthenticated = true;
@@ -348,15 +483,16 @@ io.on('connection', (socket) => {
         platform: CONFIG.PLATFORM,
         rootPath: CONFIG.ROOT_PATH,
         drives: getDrives(),
-        serverVersion: '1.0.0',
-        socketId: socket.id
+        serverVersion: '3.0.0',
+        socketId: socket.id,
+        tunnelUrl: tunnelUrl
       });
       
-      log('success', `Kimlik doğrulandı: ${socket.id}`);
+      log('success', `Kimlik dogrulandi: ${socket.id}`);
     } else {
       socket.emit('auth:failed', { error: 'Invalid token' });
       socket.disconnect();
-      log('error', `Kimlik doğrulama başarısız: ${socket.id}`);
+      log('error', `Kimlik dogrulama basarisiz: ${socket.id}`);
     }
   });
   
@@ -388,16 +524,13 @@ io.on('connection', (socket) => {
       for (const item of items) {
         try {
           const itemPath = path.join(targetPath, item);
-          const stats = getStats(itemPath);
-          if (stats) {
-            fileList.push(stats);
+          const itemStats = getStats(itemPath);
+          if (itemStats) {
+            fileList.push(itemStats);
           }
-        } catch (e) {
-          // Erişim hatası - yoksay
-        }
+        } catch (e) {}
       }
       
-      // Dizinler önce, sonra dosyalar (alfabetik)
       fileList.sort((a, b) => {
         if (a.isDirectory && !b.isDirectory) return -1;
         if (!a.isDirectory && b.isDirectory) return 1;
@@ -435,22 +568,20 @@ io.on('connection', (socket) => {
         return socket.emit('fs:read:error', { error: 'File does not exist', path: filePath });
       }
       
-      const stats = fs.statSync(filePath);
+      const fileStats = fs.statSync(filePath);
       
-      if (stats.isDirectory()) {
+      if (fileStats.isDirectory()) {
         return socket.emit('fs:read:error', { error: 'Cannot read a directory', path: filePath });
       }
       
-      // Dosya boyutu kontrolü
-      if (stats.size > CONFIG.MAX_FILE_SIZE) {
+      if (fileStats.size > CONFIG.MAX_FILE_SIZE) {
         return socket.emit('fs:read:error', { 
           error: `File too large. Max size: ${CONFIG.MAX_FILE_SIZE / 1024 / 1024}MB`,
           path: filePath,
-          size: stats.size
+          size: fileStats.size
         });
       }
       
-      // Satır bazlı okuma
       if (startLine !== undefined && endLine !== undefined) {
         const content = fs.readFileSync(filePath, encoding);
         const lines = content.split('\n');
@@ -463,7 +594,7 @@ io.on('connection', (socket) => {
           returnedLines: selectedLines.length,
           startLine,
           endLine,
-          size: stats.size,
+          size: fileStats.size,
           encoding
         });
       } else {
@@ -472,13 +603,13 @@ io.on('connection', (socket) => {
         socket.emit('fs:read:result', {
           path: filePath,
           content,
-          size: stats.size,
+          size: fileStats.size,
           encoding,
           mimeType: mime.lookup(filePath) || 'application/octet-stream'
         });
       }
       
-      log('info', `READ: ${filePath} (${stats.size} bytes)`);
+      log('info', `READ: ${filePath} (${fileStats.size} bytes)`);
     } catch (error) {
       socket.emit('fs:read:error', { error: error.message, path: filePath });
       log('error', `READ error: ${error.message}`);
@@ -498,7 +629,6 @@ io.on('connection', (socket) => {
         return socket.emit('fs:write:error', { error: 'Path not allowed', path: filePath });
       }
       
-      // Dizin yoksa oluştur
       const dir = path.dirname(filePath);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
@@ -510,17 +640,17 @@ io.on('connection', (socket) => {
         fs.writeFileSync(filePath, content, encoding);
       }
       
-      const stats = fs.statSync(filePath);
+      const fileStats = fs.statSync(filePath);
       
       socket.emit('fs:write:result', {
         path: filePath,
-        size: stats.size,
+        size: fileStats.size,
         mode,
         success: true,
         timestamp: new Date().toISOString()
       });
       
-      log('success', `WRITE: ${filePath} (${stats.size} bytes, mode: ${mode})`);
+      log('success', `WRITE: ${filePath} (${fileStats.size} bytes, mode: ${mode})`);
     } catch (error) {
       socket.emit('fs:write:error', { error: error.message, path: filePath });
       log('error', `WRITE error: ${error.message}`);
@@ -544,9 +674,9 @@ io.on('connection', (socket) => {
         return socket.emit('fs:delete:error', { error: 'Path does not exist', path: targetPath });
       }
       
-      const stats = fs.statSync(targetPath);
+      const delStats = fs.statSync(targetPath);
       
-      if (stats.isDirectory()) {
+      if (delStats.isDirectory()) {
         if (recursive) {
           fs.rmSync(targetPath, { recursive: true });
         } else {
@@ -558,7 +688,7 @@ io.on('connection', (socket) => {
       
       socket.emit('fs:delete:result', {
         path: targetPath,
-        wasDirectory: stats.isDirectory(),
+        wasDirectory: delStats.isDirectory(),
         success: true,
         timestamp: new Date().toISOString()
       });
@@ -570,7 +700,7 @@ io.on('connection', (socket) => {
     }
   });
   
-  // ═══ MKDIR - Dizin Oluşturma ═══
+  // ═══ MKDIR - Dizin Olusturma ═══
   socket.on('fs:mkdir', (data) => {
     if (!isAuthenticated) {
       return socket.emit('fs:mkdir:error', { error: 'Not authenticated' });
@@ -595,6 +725,131 @@ io.on('connection', (socket) => {
     } catch (error) {
       socket.emit('fs:mkdir:error', { error: error.message, path: dirPath });
       log('error', `MKDIR error: ${error.message}`);
+    }
+  });
+  
+  // ═══ STAT - Dosya Detaylari ═══
+  socket.on('fs:stat', (data) => {
+    if (!isAuthenticated) {
+      return socket.emit('fs:stat:error', { error: 'Not authenticated' });
+    }
+    
+    const { path: targetPath } = data;
+    
+    try {
+      if (!isPathAllowed(targetPath)) {
+        return socket.emit('fs:stat:error', { error: 'Path not allowed' });
+      }
+      
+      const statsResult = getStats(targetPath);
+      
+      if (!statsResult) {
+        return socket.emit('fs:stat:error', { error: 'Path not found' });
+      }
+      
+      socket.emit('fs:stat:result', statsResult);
+    } catch (error) {
+      socket.emit('fs:stat:error', { error: error.message });
+    }
+  });
+  
+  // ═══ RENAME - Dosya Yeniden Adlandirma ═══
+  socket.on('fs:rename', (data) => {
+    if (!isAuthenticated) {
+      return socket.emit('fs:rename:error', { error: 'Not authenticated' });
+    }
+    
+    const { path: oldPath, newName } = data;
+    
+    try {
+      if (!isPathAllowed(oldPath)) {
+        return socket.emit('fs:rename:error', { error: 'Path not allowed' });
+      }
+      
+      const dir = path.dirname(oldPath);
+      const newPath = path.join(dir, newName);
+      
+      fs.renameSync(oldPath, newPath);
+      
+      socket.emit('fs:rename:result', {
+        oldPath,
+        newPath,
+        success: true,
+        timestamp: new Date().toISOString()
+      });
+      
+      log('success', `RENAME: ${oldPath} -> ${newPath}`);
+    } catch (error) {
+      socket.emit('fs:rename:error', { error: error.message });
+      log('error', `RENAME error: ${error.message}`);
+    }
+  });
+  
+  // ═══ COPY - Dosya Kopyalama ═══
+  socket.on('fs:copy', (data) => {
+    if (!isAuthenticated) {
+      return socket.emit('fs:copy:error', { error: 'Not authenticated' });
+    }
+    
+    const { source, destination } = data;
+    
+    try {
+      if (!isPathAllowed(source) || !isPathAllowed(destination)) {
+        return socket.emit('fs:copy:error', { error: 'Path not allowed' });
+      }
+      
+      const destDir = path.dirname(destination);
+      if (!fs.existsSync(destDir)) {
+        fs.mkdirSync(destDir, { recursive: true });
+      }
+      
+      fs.copyFileSync(source, destination);
+      
+      socket.emit('fs:copy:result', {
+        source,
+        destination,
+        success: true,
+        timestamp: new Date().toISOString()
+      });
+      
+      log('success', `COPY: ${source} -> ${destination}`);
+    } catch (error) {
+      socket.emit('fs:copy:error', { error: error.message });
+      log('error', `COPY error: ${error.message}`);
+    }
+  });
+  
+  // ═══ MOVE - Dosya Tasima ═══
+  socket.on('fs:move', (data) => {
+    if (!isAuthenticated) {
+      return socket.emit('fs:move:error', { error: 'Not authenticated' });
+    }
+    
+    const { source, destination } = data;
+    
+    try {
+      if (!isPathAllowed(source) || !isPathAllowed(destination)) {
+        return socket.emit('fs:move:error', { error: 'Path not allowed' });
+      }
+      
+      const destDir = path.dirname(destination);
+      if (!fs.existsSync(destDir)) {
+        fs.mkdirSync(destDir, { recursive: true });
+      }
+      
+      fs.renameSync(source, destination);
+      
+      socket.emit('fs:move:result', {
+        source,
+        destination,
+        success: true,
+        timestamp: new Date().toISOString()
+      });
+      
+      log('success', `MOVE: ${source} -> ${destination}`);
+    } catch (error) {
+      socket.emit('fs:move:error', { error: error.message });
+      log('error', `MOVE error: ${error.message}`);
     }
   });
   
@@ -634,38 +889,30 @@ io.on('connection', (socket) => {
           for (const item of items) {
             if (searchCount >= maxResults) break;
             
-            // Gizli dosyaları atla
             if (!includeHidden && item.startsWith('.')) continue;
-            
-            // node_modules gibi klasörleri atla
             if (item === 'node_modules' || item === '__pycache__' || item === '.git') continue;
             
             const itemPath = path.join(dirPath, item);
-            const stats = getStats(itemPath);
+            const itemStats = getStats(itemPath);
             
-            if (!stats) continue;
+            if (!itemStats) continue;
             
-            // İsim eşleşmesi
             const nameMatch = pattern ? 
               item.toLowerCase().includes(pattern.toLowerCase()) : true;
             
-            // Dosya türü eşleşmesi
             const typeMatch = fileType ? 
               item.toLowerCase().endsWith(fileType.toLowerCase()) : true;
             
             if (nameMatch && typeMatch) {
-              results.push(stats);
+              results.push(itemStats);
               searchCount++;
             }
             
-            // Alt dizinleri tara
-            if (stats.isDirectory && depth < maxDepth) {
+            if (itemStats.isDirectory && depth < maxDepth) {
               searchDir(itemPath, depth + 1);
             }
           }
-        } catch (e) {
-          // Erişim hatası - yoksay
-        }
+        } catch (e) {}
       }
       
       searchDir(searchPath, 0);
@@ -683,6 +930,146 @@ io.on('connection', (socket) => {
     } catch (error) {
       socket.emit('fs:search:error', { error: error.message, path: searchPath });
       log('error', `SEARCH error: ${error.message}`);
+    }
+  });
+  
+  // ═══ EDIT - Dosya Duzenleme ═══
+  socket.on('fs:edit', (data) => {
+    if (!isAuthenticated) {
+      return socket.emit('fs:edit:error', { error: 'Not authenticated' });
+    }
+    
+    const { path: filePath, edits, encoding = 'utf8' } = data;
+    
+    try {
+      if (!isPathAllowed(filePath)) {
+        return socket.emit('fs:edit:error', { error: 'Path not allowed', path: filePath });
+      }
+      
+      if (!fs.existsSync(filePath)) {
+        return socket.emit('fs:edit:error', { error: 'File does not exist', path: filePath });
+      }
+      
+      let content = fs.readFileSync(filePath, encoding);
+      let editCount = 0;
+      
+      if (Array.isArray(edits)) {
+        for (const edit of edits) {
+          if (content.includes(edit.oldText)) {
+            content = content.replace(edit.oldText, edit.newText);
+            editCount++;
+          }
+        }
+      } else if (edits.oldText && edits.newText) {
+        if (content.includes(edits.oldText)) {
+          content = content.replace(edits.oldText, edits.newText);
+          editCount++;
+        }
+      }
+      
+      fs.writeFileSync(filePath, content, encoding);
+      
+      socket.emit('fs:edit:result', {
+        path: filePath,
+        editsApplied: editCount,
+        success: true,
+        timestamp: new Date().toISOString()
+      });
+      
+      log('success', `EDIT: ${filePath} (${editCount} edits applied)`);
+    } catch (error) {
+      socket.emit('fs:edit:error', { error: error.message, path: filePath });
+      log('error', `EDIT error: ${error.message}`);
+    }
+  });
+  
+  // ═══ BATCH - Coklu Dosya Islemi ═══
+  socket.on('fs:batch', (data) => {
+    if (!isAuthenticated) {
+      return socket.emit('fs:batch:error', { error: 'Not authenticated' });
+    }
+    
+    const { operations } = data;
+    const results = [];
+    
+    try {
+      for (const op of operations) {
+        try {
+          switch (op.type) {
+            case 'read': {
+              if (!isPathAllowed(op.path)) {
+                results.push({ type: 'read', path: op.path, error: 'Path not allowed' });
+                continue;
+              }
+              const content = fs.readFileSync(op.path, op.encoding || 'utf8');
+              results.push({ type: 'read', path: op.path, content, success: true });
+              break;
+            }
+            case 'write': {
+              if (!isPathAllowed(op.path)) {
+                results.push({ type: 'write', path: op.path, error: 'Path not allowed' });
+                continue;
+              }
+              const dir = path.dirname(op.path);
+              if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+              fs.writeFileSync(op.path, op.content, op.encoding || 'utf8');
+              results.push({ type: 'write', path: op.path, success: true });
+              break;
+            }
+            case 'delete': {
+              if (!isPathAllowed(op.path)) {
+                results.push({ type: 'delete', path: op.path, error: 'Path not allowed' });
+                continue;
+              }
+              if (fs.existsSync(op.path)) {
+                const bStats = fs.statSync(op.path);
+                if (bStats.isDirectory()) {
+                  fs.rmSync(op.path, { recursive: op.recursive || false });
+                } else {
+                  fs.unlinkSync(op.path);
+                }
+              }
+              results.push({ type: 'delete', path: op.path, success: true });
+              break;
+            }
+            case 'mkdir': {
+              if (!isPathAllowed(op.path)) {
+                results.push({ type: 'mkdir', path: op.path, error: 'Path not allowed' });
+                continue;
+              }
+              fs.mkdirSync(op.path, { recursive: true });
+              results.push({ type: 'mkdir', path: op.path, success: true });
+              break;
+            }
+            case 'copy': {
+              if (!isPathAllowed(op.source) || !isPathAllowed(op.destination)) {
+                results.push({ type: 'copy', error: 'Path not allowed' });
+                continue;
+              }
+              fs.copyFileSync(op.source, op.destination);
+              results.push({ type: 'copy', source: op.source, destination: op.destination, success: true });
+              break;
+            }
+            default:
+              results.push({ type: op.type, error: 'Unknown operation type' });
+          }
+        } catch (opError) {
+          results.push({ type: op.type, path: op.path, error: opError.message });
+        }
+      }
+      
+      socket.emit('fs:batch:result', {
+        results,
+        totalOperations: operations.length,
+        successful: results.filter(r => r.success).length,
+        failed: results.filter(r => r.error).length,
+        timestamp: new Date().toISOString()
+      });
+      
+      log('success', `BATCH: ${operations.length} operations (${results.filter(r => r.success).length} ok)`);
+    } catch (error) {
+      socket.emit('fs:batch:error', { error: error.message });
+      log('error', `BATCH error: ${error.message}`);
     }
   });
   
@@ -715,7 +1102,6 @@ io.on('connection', (socket) => {
         scripts: {}
       };
       
-      // package.json oku
       try {
         const pkgPath = path.join(projectPath, 'package.json');
         if (fs.existsSync(pkgPath)) {
@@ -735,59 +1121,51 @@ io.on('connection', (socket) => {
           const items = fs.readdirSync(dirPath);
           
           for (const item of items) {
-            // Gizli dosyaları ve klasörleri atla
-            if (item.startsWith('.') || item === 'node_modules' || item === '__pycache__') {
-              continue;
-            }
+            if (item.startsWith('.') || item === 'node_modules' || item === '__pycache__') continue;
             
             const itemPath = path.join(dirPath, item);
-            const stats = getStats(itemPath);
+            const itemStats = getStats(itemPath);
             
-            if (!stats) continue;
+            if (!itemStats) continue;
             
-            if (stats.isDirectory) {
+            if (itemStats.isDirectory) {
               analysis.directories.total++;
               structure[item] = { type: 'directory', children: {} };
               analyzeDir(itemPath, currentDepth + 1, structure[item].children);
             } else {
               analysis.files.total++;
               
-              // Uzantıya göre sınıflandır
               const ext = path.extname(item).toLowerCase() || 'no-extension';
               analysis.files.byExtension[ext] = (analysis.files.byExtension[ext] || 0) + 1;
               
-              // En büyük dosyaları takip et
               if (analysis.largestFiles.length < 10) {
-                analysis.largestFiles.push({ path: itemPath, size: stats.size });
+                analysis.largestFiles.push({ path: itemPath, size: itemStats.size });
                 analysis.largestFiles.sort((a, b) => b.size - a.size);
-              } else if (stats.size > analysis.largestFiles[9].size) {
-                analysis.largestFiles.push({ path: itemPath, size: stats.size });
+              } else if (itemStats.size > analysis.largestFiles[9].size) {
+                analysis.largestFiles.push({ path: itemPath, size: itemStats.size });
                 analysis.largestFiles.sort((a, b) => b.size - a.size);
                 analysis.largestFiles.pop();
               }
               
-              structure[item] = { type: 'file', size: stats.size };
+              structure[item] = { type: 'file', size: itemStats.size };
             }
           }
-        } catch (e) {
-          // Erişim hatası
-        }
+        } catch (e) {}
       }
       
       analyzeDir(projectPath, 0, analysis.structure);
       
-      // Öneriler
       if (analysis.projectTypes.includes('Node.js')) {
         if (!analysis.files.byExtension['.md']) {
-          analysis.suggestions.push('README.md dosyası eklemeyi düşünün');
+          analysis.suggestions.push('README.md dosyasi eklemeyi dusunun');
         }
         if (!analysis.files.byExtension['.test.'] && !analysis.files.byExtension['.spec.']) {
-          analysis.suggestions.push('Test dosyaları eklemeyi düşünün');
+          analysis.suggestions.push('Test dosyalari eklemeyi dusunun');
         }
       }
       
       if (Object.keys(analysis.dependencies).length > 20) {
-        analysis.suggestions.push('Bağımlılık sayısı yüksek, gereksiz paketleri temizleyin');
+        analysis.suggestions.push('Bagimlilik sayisi yuksek, gereksiz paketleri temizleyin');
       }
       
       socket.emit('fs:analyze:result', {
@@ -802,165 +1180,7 @@ io.on('connection', (socket) => {
     }
   });
   
-  // ═══ COPY - Dosya Kopyalama ═══
-  socket.on('fs:copy', (data) => {
-    if (!isAuthenticated) {
-      return socket.emit('fs:copy:error', { error: 'Not authenticated' });
-    }
-    
-    const { source, destination } = data;
-    
-    try {
-      if (!isPathAllowed(source) || !isPathAllowed(destination)) {
-        return socket.emit('fs:copy:error', { error: 'Path not allowed' });
-      }
-      
-      // Hedef dizin oluştur
-      const destDir = path.dirname(destination);
-      if (!fs.existsSync(destDir)) {
-        fs.mkdirSync(destDir, { recursive: true });
-      }
-      
-      fs.copyFileSync(source, destination);
-      
-      socket.emit('fs:copy:result', {
-        source,
-        destination,
-        success: true,
-        timestamp: new Date().toISOString()
-      });
-      
-      log('success', `COPY: ${source} → ${destination}`);
-    } catch (error) {
-      socket.emit('fs:copy:error', { error: error.message });
-      log('error', `COPY error: ${error.message}`);
-    }
-  });
-  
-  // ═══ MOVE - Dosya Taşıma ═══
-  socket.on('fs:move', (data) => {
-    if (!isAuthenticated) {
-      return socket.emit('fs:move:error', { error: 'Not authenticated' });
-    }
-    
-    const { source, destination } = data;
-    
-    try {
-      if (!isPathAllowed(source) || !isPathAllowed(destination)) {
-        return socket.emit('fs:move:error', { error: 'Path not allowed' });
-      }
-      
-      // Hedef dizin oluştur
-      const destDir = path.dirname(destination);
-      if (!fs.existsSync(destDir)) {
-        fs.mkdirSync(destDir, { recursive: true });
-      }
-      
-      fs.renameSync(source, destination);
-      
-      socket.emit('fs:move:result', {
-        source,
-        destination,
-        success: true,
-        timestamp: new Date().toISOString()
-      });
-      
-      log('success', `MOVE: ${source} → ${destination}`);
-    } catch (error) {
-      socket.emit('fs:move:error', { error: error.message });
-      log('error', `MOVE error: ${error.message}`);
-    }
-  });
-  
-  // ═══ RENAME - Dosya Yeniden Adlandırma ═══
-  socket.on('fs:rename', (data) => {
-    if (!isAuthenticated) {
-      return socket.emit('fs:rename:error', { error: 'Not authenticated' });
-    }
-    
-    const { path: oldPath, newName } = data;
-    
-    try {
-      if (!isPathAllowed(oldPath)) {
-        return socket.emit('fs:rename:error', { error: 'Path not allowed' });
-      }
-      
-      const dir = path.dirname(oldPath);
-      const newPath = path.join(dir, newName);
-      
-      fs.renameSync(oldPath, newPath);
-      
-      socket.emit('fs:rename:result', {
-        oldPath,
-        newPath,
-        success: true,
-        timestamp: new Date().toISOString()
-      });
-      
-      log('success', `RENAME: ${oldPath} → ${newPath}`);
-    } catch (error) {
-      socket.emit('fs:rename:error', { error: error.message });
-      log('error', `RENAME error: ${error.message}`);
-    }
-  });
-  
-  // ═══ EXISTS - Dosya/Dizin Varlık Kontrolü ═══
-  socket.on('fs:exists', (data) => {
-    if (!isAuthenticated) {
-      return socket.emit('fs:exists:error', { error: 'Not authenticated' });
-    }
-    
-    const { path: checkPath } = data;
-    
-    try {
-      const exists = fs.existsSync(checkPath);
-      const stats = exists ? getStats(checkPath) : null;
-      
-      socket.emit('fs:exists:result', {
-        path: checkPath,
-        exists,
-        stats
-      });
-    } catch (error) {
-      socket.emit('fs:exists:error', { error: error.message });
-    }
-  });
-  
-  // ═══ STAT - Dosya Detayları ═══
-  socket.on('fs:stat', (data) => {
-    if (!isAuthenticated) {
-      return socket.emit('fs:stat:error', { error: 'Not authenticated' });
-    }
-    
-    const { path: targetPath } = data;
-    
-    try {
-      if (!isPathAllowed(targetPath)) {
-        return socket.emit('fs:stat:error', { error: 'Path not allowed' });
-      }
-      
-      const stats = getStats(targetPath);
-      
-      if (!stats) {
-        return socket.emit('fs:stat:error', { error: 'Path not found' });
-      }
-      
-      socket.emit('fs:stat:result', stats);
-    } catch (error) {
-      socket.emit('fs:stat:error', { error: error.message });
-    }
-  });
-  
-  // ═══ DRIVES - Sürücüleri Listele ═══
-  socket.on('fs:drives', () => {
-    if (!isAuthenticated) {
-      return socket.emit('fs:drives:error', { error: 'Not authenticated' });
-    }
-    
-    socket.emit('fs:drives:result', { drives: getDrives() });
-  });
-  
-  // ═══ STREAM READ - Büyük Dosya Okuma ═══
+  // ═══ STREAM READ - Buyuk Dosya Okuma ═══
   socket.on('fs:stream:start', (data) => {
     if (!isAuthenticated) {
       return socket.emit('fs:stream:error', { error: 'Not authenticated' });
@@ -973,8 +1193,8 @@ io.on('connection', (socket) => {
         return socket.emit('fs:stream:error', { error: 'Path not allowed' });
       }
       
-      const stats = fs.statSync(filePath);
-      if (stats.isDirectory()) {
+      const streamStats = fs.statSync(filePath);
+      if (streamStats.isDirectory()) {
         return socket.emit('fs:stream:error', { error: 'Cannot stream a directory' });
       }
       
@@ -988,8 +1208,8 @@ io.on('connection', (socket) => {
           streamId,
           chunk: chunk.toString('base64'),
           bytesRead,
-          totalSize: stats.size,
-          progress: (bytesRead / stats.size * 100).toFixed(2)
+          totalSize: streamStats.size,
+          progress: (bytesRead / streamStats.size * 100).toFixed(2)
         });
       });
       
@@ -1005,7 +1225,7 @@ io.on('connection', (socket) => {
       socket.emit('fs:stream:start', {
         streamId,
         path: filePath,
-        size: stats.size
+        size: streamStats.size
       });
       
       log('info', `STREAM START: ${filePath}`);
@@ -1014,62 +1234,235 @@ io.on('connection', (socket) => {
     }
   });
   
-  // ═══ Bağlantı Kesilmesi ═══
+  // ═══ STREAM CANCEL ═══
+  socket.on('fs:stream:cancel', (data) => {
+    // Stream iptal - ileride implementasyon eklenebilir
+    socket.emit('fs:stream:cancel:result', { success: true });
+  });
+  
+  // ═══ DRIVES - Suruculeri Listele ═══
+  socket.on('fs:drives', () => {
+    if (!isAuthenticated) {
+      return socket.emit('fs:drives:error', { error: 'Not authenticated' });
+    }
+    
+    socket.emit('fs:drives:result', { drives: getDrives() });
+  });
+  
+  // ═══ EXISTS - Dosya/Dizin Varlik Kontrolu ═══
+  socket.on('fs:exists', (data) => {
+    if (!isAuthenticated) {
+      return socket.emit('fs:exists:error', { error: 'Not authenticated' });
+    }
+    
+    const { path: checkPath } = data;
+    
+    try {
+      const exists = fs.existsSync(checkPath);
+      const existsStats = exists ? getStats(checkPath) : null;
+      
+      socket.emit('fs:exists:result', {
+        path: checkPath,
+        exists,
+        stats: existsStats
+      });
+    } catch (error) {
+      socket.emit('fs:exists:error', { error: error.message });
+    }
+  });
+  
+  // ═══ WATCH - Dosya/Dizin Izleme ═══
+  socket.on('fs:watch', (data) => {
+    if (!isAuthenticated) {
+      return socket.emit('fs:watch:error', { error: 'Not authenticated' });
+    }
+    
+    const { path: watchPath, recursive = true } = data;
+    
+    try {
+      if (!isPathAllowed(watchPath)) {
+        return socket.emit('fs:watch:error', { error: 'Path not allowed' });
+      }
+      
+      const watchId = uuidv4();
+      
+      try {
+        const watcher = fs.watch(watchPath, { recursive }, (eventType, filename) => {
+          socket.emit('fs:watch:event', {
+            watchId,
+            path: watchPath,
+            eventType,
+            filename,
+            timestamp: new Date().toISOString()
+          });
+        });
+        
+        // Socket baglantisi kesildiginde watcher'i kapat
+        socket.on('disconnect', () => {
+          watcher.close();
+        });
+        
+        socket.emit('fs:watch:start', {
+          watchId,
+          path: watchPath,
+          recursive,
+          success: true
+        });
+        
+        log('info', `WATCH started: ${watchPath} (id: ${watchId})`);
+      } catch (watchError) {
+        socket.emit('fs:watch:error', { error: watchError.message });
+      }
+    } catch (error) {
+      socket.emit('fs:watch:error', { error: error.message });
+    }
+  });
+  
+  // ═══ TERMINAL EXECUTE - Uzak Komut Calistirma ═══
+  socket.on('terminal:execute', (data) => {
+    if (!isAuthenticated) {
+      return socket.emit('terminal:execute:error', { error: 'Not authenticated' });
+    }
+    
+    const { command, cwd, timeout = 30000 } = data;
+    
+    try {
+      const shellInfo = resolveShell();
+      
+      let spawnCmd, spawnArgs;
+      
+      if (shellInfo.type === 'powershell') {
+        spawnCmd = shellInfo.shell;
+        spawnArgs = ['-NoProfile', '-NonInteractive', '-Command', command];
+      } else if (shellInfo.type === 'cmd') {
+        spawnCmd = shellInfo.shell;
+        spawnArgs = ['/c', command];
+      } else {
+        spawnCmd = shellInfo.shell;
+        spawnArgs = ['-c', command];
+      }
+      
+      log('info', `TERMINAL: ${command} (shell: ${shellInfo.type})`);
+      
+      const proc = spawn(spawnCmd, spawnArgs, {
+        cwd: cwd || process.cwd(),
+        env: { ...process.env },
+        shell: false,
+        windowsHide: true
+      });
+      
+      let stdout = '';
+      let stderr = '';
+      
+      proc.stdout.on('data', (data) => {
+        stdout += data.toString();
+      });
+      
+      proc.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+      
+      // Timeout yonetimi
+      const timeoutId = setTimeout(() => {
+        proc.kill('SIGTERM');
+        socket.emit('terminal:execute:result', {
+          command,
+          stdout,
+          stderr: stderr + '\n[TIMEOUT] Komut zaman asimina ugradi',
+          exitCode: -1,
+          timedOut: true,
+          timestamp: new Date().toISOString()
+        });
+      }, timeout);
+      
+      proc.on('close', (code) => {
+        clearTimeout(timeoutId);
+        socket.emit('terminal:execute:result', {
+          command,
+          stdout,
+          stderr,
+          exitCode: code,
+          timedOut: false,
+          timestamp: new Date().toISOString()
+        });
+        log('info', `TERMINAL DONE: ${command} (code: ${code})`);
+      });
+      
+      proc.on('error', (error) => {
+        clearTimeout(timeoutId);
+        socket.emit('terminal:execute:error', {
+          command,
+          error: error.message,
+          timestamp: new Date().toISOString()
+        });
+        log('error', `TERMINAL error: ${error.message}`);
+      });
+      
+    } catch (error) {
+      socket.emit('terminal:execute:error', {
+        command,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+      log('error', `TERMINAL error: ${error.message}`);
+    }
+  });
+  
+  // ═══ Baglanti Kesilmesi ═══
   socket.on('disconnect', () => {
     connectedClients.delete(socket.id);
-    log('disconnect', `Bağlantı kesildi: ${socket.id}`);
+    log('disconnect', `Baglanti kesildi: ${socket.id}`);
   });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// SUNUCUYU BAŞLAT
+// SUNUCUYU BASLAT
 // ═══════════════════════════════════════════════════════════════════════════
 
 server.listen(CONFIG.PORT, () => {
   console.log('\n');
-  console.log('╔═══════════════════════════════════════════════════════════════════════════╗');
-  console.log('║                         🚀 DOSYATRANS                                      ║');
-  console.log('║                      AI File Bridge Server                                 ║');
-  console.log('╠═══════════════════════════════════════════════════════════════════════════╣');
-  console.log(`║  Port: ${CONFIG.PORT.toString().padEnd(67)}║`);
-  console.log(`║  Platform: ${CONFIG.PLATFORM.padEnd(64)}║`);
-  console.log(`║  Root Path: ${CONFIG.ROOT_PATH.padEnd(63)}║`);
-  console.log(`║  Auth Token: ${CONFIG.AUTH_TOKEN.padEnd(62)}║`);
-  console.log('╠═══════════════════════════════════════════════════════════════════════════╣');
-  console.log('║  🔗 WebSocket: ws://localhost:' + CONFIG.PORT);
-  console.log('║  🌐 HTTP: http://localhost:' + CONFIG.PORT);
-  console.log('╠═══════════════════════════════════════════════════════════════════════════╣');
-  console.log('║  📌 Tunnel için ngrok veya cloudflare tunnel kullanın:                     ║');
-  console.log('║     ngrok http ' + CONFIG.PORT);
-  console.log('║     cloudflared tunnel --url http://localhost:' + CONFIG.PORT);
-  console.log('╠═══════════════════════════════════════════════════════════════════════════╣');
-  console.log('║  📖 Dokümantasyon: https://github.com/yourusername/dosyatrans              ║');
-  console.log('╚═══════════════════════════════════════════════════════════════════════════╝');
-  console.log('\n⏳ AI bağlantısı için hazır...\n');
+  console.log('================================================================');
+  console.log('               DOSYATRANS v3.0 - AI File Bridge');
+  console.log('================================================================');
+  console.log(`  Port:       ${CONFIG.PORT}`);
+  console.log(`  Platform:   ${CONFIG.PLATFORM}`);
+  console.log(`  Root Path:  ${CONFIG.ROOT_PATH}`);
+  console.log(`  Auth Token: ${CONFIG.AUTH_TOKEN}`);
+  console.log('================================================================');
+  console.log(`  Web UI:     http://localhost:${CONFIG.PORT}`);
+  console.log(`  WebSocket:  ws://localhost:${CONFIG.PORT}`);
+  console.log(`  Health:     http://localhost:${CONFIG.PORT}/health`);
+  console.log('================================================================');
+  console.log('  Cloudflared otomatik baslatilacak...');
+  console.log('  Tunnel URL algilandiginda arayuze otomatik gonderilecek.');
+  console.log('================================================================\n');
+  
+  // Cloudflared'i otomatik baslat
+  startCloudflared();
 });
 
 // Graceful shutdown
 process.on('SIGINT', () => {
-  console.log('\n🛑 Sunucu kapatılıyor...');
+  console.log('\nSunucu kapatiliyor...');
   server.close(() => {
-    console.log('✅ Sunucu kapatıldı.');
+    console.log('Sunucu kapatildi.');
     process.exit(0);
   });
 });
 
 process.on('SIGTERM', () => {
-  console.log('\n🛑 Sunucu kapatılıyor (SIGTERM)...');
+  console.log('\nSunucu kapatiliyor (SIGTERM)...');
   server.close(() => {
-    console.log('✅ Sunucu kapatıldı.');
+    console.log('Sunucu kapatildi.');
     process.exit(0);
   });
 });
 
-// Hata yönetimi
+// Hata yonetimi
 process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error);
+  console.error('Uncaught Exception:', error);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection:', reason);
+  console.error('Unhandled Rejection:', reason);
 });

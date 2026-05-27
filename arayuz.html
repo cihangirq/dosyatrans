@@ -3,266 +3,586 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DOSYATRANS - AI Baglanti Merkezi</title>
+    <title>DOSYATRANS v3.0 - AI Baglanti Merkezi</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #0c0c1d 0%, #1a1a3e 30%, #0d2137 60%, #0a1628 100%);
             min-height: 100vh;
             padding: 20px;
-            color: #fff;
+            color: #e0e0e0;
+            overflow-x: hidden;
         }
-        .container { max-width: 800px; margin: 0 auto; }
+
+        /* Animated background particles */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(79, 195, 247, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(129, 199, 132, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(156, 39, 176, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container { 
+            max-width: 850px; 
+            margin: 0 auto; 
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
         .header {
             text-align: center;
-            padding: 30px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 40px 0 30px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
             margin-bottom: 30px;
         }
-        .logo { font-size: 48px; margin-bottom: 10px; }
-        h1 { font-size: 28px; font-weight: 600; margin-bottom: 5px; }
-        .subtitle { color: #888; font-size: 14px; }
+        .logo { font-size: 56px; margin-bottom: 12px; filter: drop-shadow(0 4px 12px rgba(79,195,247,0.3)); }
+        h1 { 
+            font-size: 32px; 
+            font-weight: 700; 
+            margin-bottom: 6px;
+            background: linear-gradient(135deg, #4fc3f7 0%, #81c784 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .version-badge {
+            display: inline-block;
+            background: rgba(79, 195, 247, 0.15);
+            border: 1px solid rgba(79, 195, 247, 0.3);
+            color: #4fc3f7;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .subtitle { color: #888; font-size: 14px; margin-top: 4px; }
+
+        /* Glass Card */
         .card {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transition: border-color 0.3s;
+        }
+        .card:hover {
+            border-color: rgba(255,255,255,0.15);
         }
         .card-title {
-            font-size: 16px;
+            font-size: 17px;
             font-weight: 600;
-            margin-bottom: 15px;
+            margin-bottom: 16px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
-        .info-box {
-            background: rgba(0,0,0,0.3);
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
-        .url-input {
-            background: rgba(0,0,0,0.4);
-            border: 2px solid #4fc3f7;
-            color: #4fc3f7;
-            padding: 15px;
-            border-radius: 8px;
-            width: 100%;
-            font-family: 'Consolas', monospace;
-            font-size: 16px;
-            margin-bottom: 10px;
-        }
-        .url-input:focus { outline: none; border-color: #81c784; }
-        .token-display {
-            font-family: 'Consolas', monospace;
-            font-size: 14px;
-            color: #81c784;
-            background: rgba(0,0,0,0.4);
-            padding: 12px;
-            border-radius: 6px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .copy-btn {
-            background: #4fc3f7;
-            color: #000;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-        .copy-btn:hover { background: #29b6f6; transform: translateY(-1px); }
-        .copy-all-btn {
-            background: linear-gradient(135deg, #4fc3f7 0%, #29b6f6 100%);
-            color: #000;
-            border: none;
-            padding: 18px 30px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 18px;
-            font-weight: 600;
-            width: 100%;
-            margin-top: 15px;
-            transition: all 0.2s;
-        }
-        .copy-all-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(79, 195, 247, 0.3); }
-        .message-box {
-            background: rgba(0,0,0,0.4);
-            border-radius: 8px;
-            padding: 15px;
-            font-size: 13px;
-            line-height: 1.6;
-            color: #ccc;
-            white-space: pre-wrap;
-            max-height: 300px;
-            overflow-y: auto;
-        }
+
+        /* Status Bar */
         .status {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 12px 15px;
-            background: rgba(129, 199, 132, 0.1);
-            border-radius: 8px;
-            margin-bottom: 15px;
+            gap: 10px;
+            padding: 14px 18px;
+            background: rgba(129, 199, 132, 0.08);
+            border: 1px solid rgba(129, 199, 132, 0.2);
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .status.disconnected {
+            background: rgba(244, 67, 54, 0.08);
+            border-color: rgba(244, 67, 54, 0.2);
         }
         .status-dot {
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             background: #81c784;
             border-radius: 50%;
             animation: pulse 2s infinite;
+            box-shadow: 0 0 8px rgba(129, 199, 132, 0.5);
         }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .how-to {
-            background: rgba(255,193,7,0.1);
-            border-left: 3px solid #ffc107;
-            padding: 15px;
-            border-radius: 0 8px 8px 0;
+        .status.disconnected .status-dot {
+            background: #f44336;
+            box-shadow: 0 0 8px rgba(244, 67, 54, 0.5);
+            animation: none;
         }
-        .how-to h3 { color: #ffc107; margin-bottom: 10px; }
-        .how-to ol { margin-left: 20px; }
-        .how-to li { margin-bottom: 8px; color: #ccc; }
-        .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
-        #copyMessage {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #4fc3f7;
-            color: #000;
-            padding: 15px 25px;
+        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.9); } }
+
+        /* Info Box */
+        .info-box {
+            background: rgba(0,0,0,0.25);
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 16px;
+        }
+
+        /* URL Display */
+        .url-display {
+            background: rgba(0,0,0,0.35);
+            border: 2px solid rgba(79, 195, 247, 0.3);
+            color: #4fc3f7;
+            padding: 16px;
+            border-radius: 10px;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            font-size: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            transition: border-color 0.3s;
+            word-break: break-all;
+        }
+        .url-display:hover {
+            border-color: rgba(79, 195, 247, 0.6);
+        }
+        .url-display .url-text {
+            flex: 1;
+            overflow: hidden;
+        }
+        .url-display .placeholder {
+            color: #555;
+            font-style: italic;
+        }
+
+        /* Token Display */
+        .token-display {
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            font-size: 14px;
+            color: #81c784;
+            background: rgba(0,0,0,0.35);
+            padding: 14px 16px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid rgba(129, 199, 132, 0.15);
+        }
+
+        /* Buttons */
+        .copy-btn {
+            background: rgba(79, 195, 247, 0.15);
+            color: #4fc3f7;
+            border: 1px solid rgba(79, 195, 247, 0.3);
+            padding: 8px 18px;
             border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
             font-weight: 600;
-            animation: slideIn 0.3s ease;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .copy-btn:hover { 
+            background: rgba(79, 195, 247, 0.25); 
+            border-color: rgba(79, 195, 247, 0.5);
+            transform: translateY(-1px); 
+        }
+        .copy-btn:active { transform: translateY(0); }
+
+        .copy-all-btn {
+            background: linear-gradient(135deg, rgba(79, 195, 247, 0.2) 0%, rgba(129, 199, 132, 0.2) 100%);
+            color: #e0e0e0;
+            border: 1px solid rgba(79, 195, 247, 0.3);
+            padding: 18px 30px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 17px;
+            font-weight: 700;
+            width: 100%;
+            margin-top: 16px;
+            transition: all 0.3s;
+            letter-spacing: 0.5px;
+        }
+        .copy-all-btn:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 8px 30px rgba(79, 195, 247, 0.2);
+            border-color: rgba(79, 195, 247, 0.5);
+            background: linear-gradient(135deg, rgba(79, 195, 247, 0.3) 0%, rgba(129, 199, 132, 0.3) 100%);
+        }
+        .copy-all-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Ready Message Box */
+        .message-box {
+            background: rgba(0,0,0,0.35);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+            padding: 18px;
+            font-size: 13px;
+            line-height: 1.7;
+            color: #ccc;
+            white-space: pre-wrap;
+            max-height: 320px;
+            overflow-y: auto;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+        }
+        .message-box::-webkit-scrollbar { width: 6px; }
+        .message-box::-webkit-scrollbar-track { background: transparent; }
+        .message-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+        /* How To */
+        .how-to {
+            background: rgba(255,193,7,0.06);
+            border: 1px solid rgba(255,193,7,0.15);
+            border-left: 3px solid #ffc107;
+            padding: 20px;
+            border-radius: 0 12px 12px 0;
+        }
+        .how-to h3 { color: #ffc107; margin-bottom: 12px; font-size: 15px; }
+        .how-to ol { margin-left: 20px; }
+        .how-to li { margin-bottom: 8px; color: #bbb; font-size: 14px; line-height: 1.5; }
+
+        /* Footer */
+        .footer { 
+            text-align: center; 
+            padding: 30px 0 20px; 
+            color: #555; 
+            font-size: 12px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            margin-top: 20px;
+        }
+
+        /* Toast */
+        #copyToast {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            background: linear-gradient(135deg, #4fc3f7 0%, #29b6f6 100%);
+            color: #000;
+            padding: 14px 28px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 14px;
+            animation: slideIn 0.3s ease, fadeOut 0.3s ease 1.5s forwards;
             z-index: 1000;
+            box-shadow: 0 8px 32px rgba(79, 195, 247, 0.3);
         }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
         .hidden { display: none; }
+
+        /* Loading spinner */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(79,195,247,0.3);
+            border-top-color: #4fc3f7;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            body { padding: 12px; }
+            .card { padding: 16px; }
+            h1 { font-size: 24px; }
+            .logo { font-size: 40px; }
+            .url-display { font-size: 13px; padding: 12px; flex-direction: column; }
+            .copy-btn { width: 100%; text-align: center; }
+            .token-display { flex-direction: column; gap: 8px; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo">🌉</div>
+            <div class="logo">&#127753;</div>
+            <div class="version-badge">v3.0</div>
             <h1>DOSYATRANS</h1>
             <p class="subtitle">AI File Bridge - Baglanti Merkezi</p>
         </div>
 
+        <!-- Durum Karti -->
         <div class="card">
-            <div class="status">
+            <div class="status" id="statusBar">
                 <div class="status-dot"></div>
-                <span>Sistem Aktif</span>
+                <span id="statusText">Sunucuya baglaniyor...</span>
             </div>
 
-            <div class="card-title">📡 ADIM 1: Tunnel URL Girin</div>
-            <p style="font-size:13px; color:#888; margin-bottom:10px;">
-                Terminaldeki <strong>trycloudflare.com</strong> URL'ini asagiya yapistirin:
+            <div class="card-title">&#128225; Tunnel URL</div>
+            <p style="font-size:13px; color:#888; margin-bottom:12px;">
+                Cloudflare Tunnel URL otomatik algilanir. Elle de girebilirsiniz.
             </p>
             <div class="info-box">
-                <input type="text" class="url-input" id="tunnelUrlInput" placeholder="https://xxx.trycloudflare.com" onchange="updateMessage()" oninput="updateMessage()">
+                <div class="url-display" id="urlDisplay">
+                    <span class="url-text" id="urlText">
+                        <span class="placeholder" id="urlPlaceholder">
+                            <span class="spinner"></span> Tunnel URL bekleniyor...
+                        </span>
+                    </span>
+                    <button class="copy-btn" id="copyUrlBtn" onclick="copyUrl()" disabled>URL Kopyala</button>
+                </div>
                 <div class="token-display">
-                    <span>🔑 Token: <strong id="token">dosyatrans-secure-token-2024</strong></span>
+                    <span>&#128273; Token: <strong id="tokenText">dosyatrans-secure-token-2024</strong></span>
                     <button class="copy-btn" onclick="copyToken()">Kopyala</button>
                 </div>
             </div>
         </div>
 
+        <!-- Hazir Mesaj Karti -->
         <div class="card">
-            <div class="card-title">📋 ADIM 2: Hazir Mesaji Kopyalayin</div>
-            <p style="font-size:13px; color:#888; margin-bottom:10px;">
+            <div class="card-title">&#128203; Hazir Mesaj</div>
+            <p style="font-size:13px; color:#888; margin-bottom:12px;">
                 Asagidaki mesaji kopyalayip AI sohbetine yapistirin.
             </p>
-            <div class="message-box" id="readyMessage">URL girin...</div>
-            <button class="copy-all-btn" onclick="copyAll()">📋 HAZIR MESAJI KOPYALA</button>
+            <div class="message-box" id="readyMessage">Tunnel URL bekleniyor...</div>
+            <button class="copy-all-btn" id="copyAllBtn" onclick="copyAll()" disabled>&#128203; HAZIR MESAJI KOPYALA</button>
         </div>
 
+        <!-- Nasil Kullanilir -->
         <div class="card how-to">
-            <h3>💡 Nasil Kullanilir?</h3>
+            <h3>&#128161; Nasil Kullanilir?</h3>
             <ol>
-                <li>Terminalden <strong>trycloudflare.com</strong> URL'ini kopyalayin</li>
-                <li>Yukaridaki kutuya yapistirin</li>
+                <li><strong>baslat.bat</strong> dosyasini cift tiklayin - her sey otomatik baslar</li>
+                <li>Cloudflare Tunnel URL otomatik algilanir</li>
                 <li><strong>"Hazir Mesaji Kopyala"</strong> butonuna basin</li>
-                <li>AI sohbetine yapistirin</li>
+                <li>AI sohbetine yapistirin - islem tamam!</li>
             </ol>
         </div>
 
         <div class="footer">
-            <p>DOSYATRANS v1.0 | github.com/cihangirq/dosyatrans</p>
+            <p>DOSYATRANS v3.0 | github.com/cihangirq/dosyatrans</p>
         </div>
     </div>
 
-    <div id="copyMessage" class="hidden">✅ Kopyalandi!</div>
+    <div id="copyToast" class="hidden">&#9989; Kopyalandi!</div>
 
+    <!-- Socket.IO Client -->
+    <script src="/socket.io/socket.io.js"></script>
     <script>
-        function updateMessage() {
-            const url = document.getElementById('tunnelUrlInput').value.trim();
-            if (!url || !url.includes('trycloudflare')) {
-                document.getElementById('readyMessage').textContent = '⚠️ Lutfen gecerli bir tunnel URL girin (trycloudflare.com ile biten)';
+        // ═══════════════════════════════════════════════════════════
+        // STATE
+        // ═══════════════════════════════════════════════════════════
+        let currentTunnelUrl = '';
+        let currentToken = 'dosyatrans-secure-token-2024';
+        let socketConnected = false;
+
+        // ═══════════════════════════════════════════════════════════
+        // SOCKET.IO CONNECTION
+        // ═══════════════════════════════════════════════════════════
+        const socket = io({
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            reconnectionAttempts: 10
+        });
+
+        socket.on('connect', () => {
+            socketConnected = true;
+            updateStatus(true);
+            console.log('Socket.IO baglandi:', socket.id);
+        });
+
+        socket.on('disconnect', () => {
+            socketConnected = false;
+            updateStatus(false);
+            console.log('Socket.IO baglanti kesildi');
+        });
+
+        socket.on('connect_error', (error) => {
+            socketConnected = false;
+            updateStatus(false);
+            console.log('Socket.IO baglanti hatasi:', error.message);
+        });
+
+        // Tunnel URL algilama
+        socket.on('tunnel-url', (data) => {
+            if (data.url) {
+                currentTunnelUrl = data.url;
+                if (data.token) currentToken = data.token;
+                updateUrlDisplay();
+                updateReadyMessage();
+                console.log('Tunnel URL algilandi:', data.url);
+            }
+        });
+
+        // ═══════════════════════════════════════════════════════════
+        // UI UPDATE FUNCTIONS
+        // ═══════════════════════════════════════════════════════════
+        function updateStatus(connected) {
+            const statusBar = document.getElementById('statusBar');
+            const statusText = document.getElementById('statusText');
+            
+            if (connected) {
+                statusBar.classList.remove('disconnected');
+                if (currentTunnelUrl) {
+                    statusText.textContent = 'Sistem Aktif - Tunnel Bagli';
+                } else {
+                    statusText.textContent = 'Sunucuya Bagli - Tunnel Bekleniyor...';
+                }
+            } else {
+                statusBar.classList.add('disconnected');
+                statusText.textContent = 'Baglanti Kesildi - Yeniden Baglaniyor...';
+            }
+        }
+
+        function updateUrlDisplay() {
+            const urlText = document.getElementById('urlText');
+            const urlPlaceholder = document.getElementById('urlPlaceholder');
+            const copyUrlBtn = document.getElementById('copyUrlBtn');
+            
+            if (currentTunnelUrl) {
+                urlText.innerHTML = '';
+                urlText.textContent = currentTunnelUrl;
+                copyUrlBtn.disabled = false;
+            }
+            
+            document.getElementById('tokenText').textContent = currentToken;
+            
+            // Status'u da guncelle
+            if (socketConnected) {
+                updateStatus(true);
+            }
+        }
+
+        function updateReadyMessage() {
+            const msgBox = document.getElementById('readyMessage');
+            const copyAllBtn = document.getElementById('copyAllBtn');
+            
+            if (!currentTunnelUrl) {
+                msgBox.textContent = 'Tunnel URL bekleniyor...';
+                copyAllBtn.disabled = true;
                 return;
             }
 
             const message = `== DOSYATRANS BAGLANTI BILGILERI ==
 
-📡 Tunnel URL: ${url}
-🔑 Token: dosyatrans-secure-token-2024
+Tunnel URL: ${currentTunnelUrl}
+Token: ${currentToken}
 
 ---
 
-📖 SISTEM NEDIR?
-Bu bir "AI File Bridge" sistemidir. Bu bilgilerle bilgisayarımdaki dosyalara erişebilirsiniz.
+SISTEM NEDIR?
+Bu bir "AI File Bridge" sistemidir. Bu bilgilerle bilgisayarimdaki dosyalara erisebilirsiniz.
 
-📁 YAPABİLECEKLERİNİZ:
-- Klasörleri listeleme ve okuma
-- Dosya okuma, yazma, düzenleme
+YAPABILECEKLERINIZ:
+- Klasorleri listeleme ve okuma
+- Dosya okuma, yazma, duzenleme
 - Proje analizi
 - Dosya arama
+- Terminal komutlari calistirma
 
-💡 NASIL ÇALIŞIR?
-1. Ben size bir klasör yolu veririm (örn: D:\\Projeler\\MyApp)
-2. Siz bu klasörü analiz edersiniz
-3. Dosyaları okuyup önerebilirsiniz
+NASIL CALISIR?
+1. Ben size bir klasor yolu veririm (orn: D:\\Projeler\\MyApp)
+2. Siz bu klasoru analiz edersiniz
+3. Dosyalari okuyup onerebilirsiniz
+4. Gerekirse dosya duzenleme yapabilirsiniz
 
-🚀 Başlamaya hazırım! Hangi klasörü incelememi istersiniz?`;
+Baslamaya hazirim! Hangi klasoru incelememi istersiniz?`;
 
-            document.getElementById('readyMessage').textContent = message;
-            localStorage.setItem('tunnelUrl', url);
+            msgBox.textContent = message;
+            copyAllBtn.disabled = false;
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // COPY FUNCTIONS
+        // ═══════════════════════════════════════════════════════════
+        function copyUrl() {
+            if (!currentTunnelUrl) return;
+            navigator.clipboard.writeText(currentTunnelUrl).then(() => {
+                showToast('URL kopyalandi!');
+            }).catch(() => {
+                fallbackCopy(currentTunnelUrl);
+            });
         }
 
         function copyToken() {
-            navigator.clipboard.writeText('dosyatrans-secure-token-2024');
-            showCopied();
+            navigator.clipboard.writeText(currentToken).then(() => {
+                showToast('Token kopyalandi!');
+            }).catch(() => {
+                fallbackCopy(currentToken);
+            });
         }
 
         function copyAll() {
             const message = document.getElementById('readyMessage').textContent;
-            if (message.includes('gecerli bir tunnel URL')) {
-                alert('Once tunnel URL girin!');
+            if (!currentTunnelUrl || message.includes('bekleniyor')) {
+                showToast('Henuz tunnel URL algilanmadi!');
                 return;
             }
-            navigator.clipboard.writeText(message);
-            showCopied();
+            navigator.clipboard.writeText(message).then(() => {
+                showToast('Hazir mesaj kopyalandi!');
+            }).catch(() => {
+                fallbackCopy(message);
+            });
         }
 
-        function showCopied() {
-            const msg = document.getElementById('copyMessage');
-            msg.classList.remove('hidden');
-            setTimeout(() => msg.classList.add('hidden'), 2000);
-        }
-
-        window.onload = function() {
-            const stored = localStorage.getItem('tunnelUrl');
-            if (stored) {
-                document.getElementById('tunnelUrlInput').value = stored;
-                updateMessage();
+        function fallbackCopy(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast('Kopyalandi!');
+            } catch (e) {
+                showToast('Kopyalama basarisiz!');
             }
-        };
+            document.body.removeChild(textarea);
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('copyToast');
+            toast.textContent = message;
+            toast.classList.remove('hidden');
+            // Reset animation
+            toast.style.animation = 'none';
+            toast.offsetHeight; // Trigger reflow
+            toast.style.animation = 'slideIn 0.3s ease, fadeOut 0.3s ease 1.5s forwards';
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 2000);
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // FALLBACK: HTTP polling if Socket.IO fails
+        // ═══════════════════════════════════════════════════════════
+        let pollingInterval = null;
+
+        function startPolling() {
+            if (pollingInterval) return;
+            pollingInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/tunnel-url');
+                    const data = await response.json();
+                    if (data.url && data.url !== currentTunnelUrl) {
+                        currentTunnelUrl = data.url;
+                        if (data.token) currentToken = data.token;
+                        updateUrlDisplay();
+                        updateReadyMessage();
+                    }
+                    if (data.url) {
+                        updateStatus(true);
+                    }
+                } catch (e) {
+                    // Polling failed, ignore
+                }
+            }, 5000);
+        }
+
+        // Start polling as fallback
+        setTimeout(startPolling, 3000);
     </script>
 </body>
 </html>
