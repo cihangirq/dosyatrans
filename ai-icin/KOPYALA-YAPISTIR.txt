@@ -1,0 +1,57 @@
+================================================================================
+   BU METNI KOPYALAYIP AI SOHBETINE YAPISTIRIN
+================================================================================
+
+Merhaba! Asagidaki bilgilerle bilgisayarima baglan ve dosyalarima eris:
+
+--- DOSYATRANS BAGLANTI BILGILERI ---
+
+Tunnel URL: https://BURAYA-GUNCEL-URL-YAZIN
+Token: dosyatrans-secure-token-2024
+
+--- BAGLANMA KOMUTU ---
+
+Bu kodu calistir:
+cd ai-baglanti && node baglan.js TUNNEL_URL TOKEN
+
+Ornek:
+cd ai-baglanti && node baglan.js https://xxx.trycloudflare.com dosyatrans-secure-token-2024
+
+--- YAPABILECEKLERIN ---
+
+- listDir(path)          -> Klasor listele
+- readFile(path)         -> Dosya oku
+- writeFile(path, content) -> Dosya yaz
+- editFile(path, edits)  -> Dosya duzenle (find & replace)
+- executeCommand(cmd)    -> Terminal komutu calistir
+- searchFiles(path, opts) -> Dosya ara
+- analyzeProject(path)   -> Proje analiz et
+- copyFile(src, dest)    -> Dosya kopyala
+- moveFile(src, dest)    -> Dosya tasi
+- deletePath(path)       -> Dosya sil
+- makeDir(path)          -> Klasor olustur
+- batchOperations(ops)   -> Coklu islem
+- listDrives()           -> Suruculeri listele
+- pathExists(path)       -> Varlik kontrolu
+- getStats(path)         -> Dosya detaylari
+
+--- PROJE BILGISI ---
+
+Proje: DOSYATRANS v3.0 - AI File Bridge
+Yol: C:\kodlar\dosyatrans-main
+GitHub: https://github.com/cihangirq/dosyatrans
+
+Proje uzerinde test ve gelistirme yapabilirsin.
+Hata tespiti ve duzeltme icin proje dosyalarini incele.
+Gelistirme onerileri icin AI-TAM-BILGI.txt dosyasina bak.
+
+--- TEST ETMEK ICIN ---
+
+1. Oncelikle proje klasorunu listele:
+   await dosyatrans.listDir('C:\\kodlar\\dosyatrans-main')
+
+2. server.js dosyasini oku ve incele
+3. Hata varsa duzelt, oneri varsa belirt
+4. Yeni ozellik onerileri sun
+
+================================================================================

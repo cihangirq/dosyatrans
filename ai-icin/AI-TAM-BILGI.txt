@@ -1,0 +1,216 @@
+================================================================================
+              DOSYATRANS v3.0 - AI ICIN TAM BILGI DOSYASI
+================================================================================
+
+Bu dosyayi oldugu gibi kopyalayip AI sohbetine yapistirin.
+AI bu bilgilerle bilgisayara baglanip tum dosyalara erisebilir.
+
+================================================================================
+BOLUM 1: BAGLANTI BILGILERI
+================================================================================
+
+Tunnel URL: https://BURAYA-GUNCEL-URL-YAZIN
+Token: dosyatrans-secure-token-2024
+
+NOT: Tunnel URL her baslatmada degisir!
+Guncel URL icin baslat.bat calistirin ve arayuzden kopyalayin.
+
+================================================================================
+BOLUM 2: BAGLANMA KODU
+================================================================================
+
+AI bu kodu calistirarak bilgisayara baglanir:
+
+cd ai-baglanti && node baglan.js TUNNEL_URL TOKEN
+
+Ornek:
+cd ai-baglanti && node baglan.js https://xxx.trycloudflare.com dosyatrans-secure-token-2024
+
+Baglanti kurulduktan sonra AI sunlari yapabilir:
+- Klasorleri listeleme
+- Dosya okuma/yazma/duzenleme
+- Proje analizi
+- Terminal komutu calistirma
+- Dosya arama/kopyalama/tasima
+
+================================================================================
+BOLUM 3: DOSYA ISLEMLERI API
+================================================================================
+
+Tum fonksiyonlar async/await kullanir. Ornek kullanimlar:
+
+1. KLASOR LISTELEME
+   const sonuc = await dosyatrans.listDir('C:\\kodlar');
+   // sonuc.items = [{name, path, isDirectory, size, ...}, ...]
+
+2. DOSYA OKUMA
+   const sonuc = await dosyatrans.readFile('C:\\kodlar\\proje\\server.js');
+   // sonuc.content = dosya icerigi
+
+3. DOSYA YAZMA
+   await dosyatrans.writeFile('C:\\kodlar\\proje\\test.txt', 'Merhaba!');
+   // mode: 'write' (ustune yazar) veya 'append' (sonuna ekler)
+
+4. DOSYA DUZENLEME (Find & Replace)
+   await dosyatrans.editFile('C:\\kodlar\\proje\\index.js', [
+     {oldText: 'eski kod', newText: 'yeni kod'}
+   ]);
+
+5. TERMINAL KOMUTU
+   const sonuc = await dosyatrans.executeCommand('npm install', 'C:\\kodlar\\proje');
+   // sonuc.stdout, sonuc.stderr, sonuc.exitCode
+
+6. PROJE ANALIZI
+   const sonuc = await dosyatrans.analyzeProject('C:\\kodlar\\proje');
+   // sonuc.projectTypes, sonuc.files, sonuc.dependencies, ...
+
+7. DOSYA ARAMA
+   const sonuc = await dosyatrans.searchFiles('C:\\kodlar', {
+     pattern: 'server', fileType: '.js', maxDepth: 5
+   });
+
+8. DOSYA KOPYALAMA / TASIMA
+   await dosyatrans.copyFile('kaynak.txt', 'hedef.txt');
+   await dosyatrans.moveFile('kaynak.txt', 'hedef.txt');
+
+9. BATCH (COKLU) ISLEM
+   await dosyatrans.batchOperations([
+     {type: 'read', path: 'C:\\proje\\package.json'},
+     {type: 'write', path: 'C:\\proje\\test.txt', content: 'test'},
+     {type: 'mkdir', path: 'C:\\proje\\yeni-klasor'}
+   ]);
+
+10. DIGER FONKSIYONLAR
+    await dosyatrans.deletePath(path, recursive)
+    await dosyatrans.makeDir(path)
+    await dosyatrans.renamePath(path, newName)
+    await dosyatrans.getStats(path)
+    await dosyatrans.pathExists(path)
+    await dosyatrans.listDrives()
+
+================================================================================
+BOLUM 4: PROJE HAKKINDA
+================================================================================
+
+Proje Adi: DOSYATRANS v3.0
+Proje Yolu: C:\kodlar\dosyatrans-main
+GitHub: https://github.com/cihangirq/dosyatrans
+Lisans: MIT
+
+DOSYA YAPISI:
+  baslat.bat          - Tek tikla baslatma (sunucu + tunnel + arayuz)
+  kur.bat             - Yeni bilgisayara tam kurulum
+  yeniden_baslat.bat  - Sunucuyu yeniden baslat
+  server.js           - Ana sunucu (Node.js + Express + Socket.IO)
+  arayuz.html         - Web arayuzu (glass-morphism tasarim)
+  package.json        - Bagimliliklar (v3.0.0)
+  .env.example        - Ayar sablonu
+  ai-baglanti/        - AI icin baglanti kodlari
+  ai-icin/            - AI icin bilgi dosyalari (bu klasor)
+
+TEKNOLOJILER:
+  - Node.js + Express (HTTP sunucu)
+  - Socket.IO (WebSocket - gercek zamanli iletisim)
+  - Cloudflare Tunnel (cloudflared - internete acma)
+  - Windows batch dosyalari (otomasyon)
+
+PROTOCOL:
+  Socket.IO event tabanli:
+  - fs:list       -> fs:list:result / fs:list:error
+  - fs:read       -> fs:read:result / fs:read:error
+  - fs:write      -> fs:write:result / fs:write:error
+  - fs:delete     -> fs:delete:result / fs:delete:error
+  - fs:mkdir      -> fs:mkdir:result / fs:mkdir:error
+  - fs:search     -> fs:search:result / fs:search:error
+  - fs:stat       -> fs:stat:result / fs:stat:error
+  - fs:rename     -> fs:rename:result / fs:rename:error
+  - fs:copy       -> fs:copy:result / fs:copy:error
+  - fs:move       -> fs:move:result / fs:move:error
+  - fs:edit       -> fs:edit:result / fs:edit:error
+  - fs:batch      -> fs:batch:result / fs:batch:error
+  - fs:analyze    -> fs:analyze:result / fs:analyze:error
+  - fs:exists     -> fs:exists:result / fs:exists:error
+  - fs:drives     -> fs:drives:result / fs:drives:error
+  - fs:watch      -> fs:watch:event / fs:watch:start
+  - fs:stream:start -> fs:stream:chunk / fs:stream:end
+  - terminal:execute -> terminal:execute:result / terminal:execute:error
+
+================================================================================
+BOLUM 5: TEST VE GELISTIRME
+================================================================================
+
+PROJEYI TEST ETMEK ICIN:
+
+1. Baglanti Testi:
+   node baglan.js TUNNEL_URL TOKEN
+   Basarili ise: "Baglandi!" ve "Dogrulandi!" gorunur
+
+2. Dosya Okuma Testi:
+   const sonuc = await dosyatrans.readFile('C:\\kodlar\\dosyatrans-main\\package.json');
+
+3. Dosya Yazma Testi:
+   await dosyatrans.writeFile('C:\\kodlar\\dosyatrans-main\\test.txt', 'Test basarili!');
+
+4. Dizin Listeleme Testi:
+   const sonuc = await dosyatrans.listDir('C:\\kodlar\\dosyatrans-main');
+
+5. Terminal Testi:
+   const sonuc = await dosyatrans.executeCommand('node --version');
+
+BILINEN HATALAR VE COZUMLERI:
+
+HATA: "spawn cmd.exe ENOENT"
+COZUM: v3.0'da resolveShell() fonksiyonu ile cozuldu.
+       PowerShell yolunu tam olarak bulur.
+
+HATA: "Tunnel URL algilanamadi"
+COZUM: cloudflared.exe'nin kur.bat ile kurulmus oldugundan emin olun.
+       Veya manuel: cloudflared tunnel --url http://localhost:3001
+
+HATA: "CORS hatasi"
+COZUM: server.js'de cors: { origin: '*' } ayari var.
+       Farkli bir hata ise Socket.IO transport sorunudur.
+
+HATA: "npm install basarisiz"
+COZUM: Node.js 16+ gereklidir. kur.bat ile yeniden kurun.
+
+GELISTIRME ONERILERI:
+
+1. Dosya yukleme/indirme (upload/download) ozelligi ekle
+2. Coklu kullanici destegi (farkli tokenlar)
+3. Dosya sikistirma (zip/unzip) destegi
+4. Log dosyasi tutma
+5. Web arayuzunde dosya yoneticisi (file manager)
+6. SSL/HTTPS sertifikasi destegi
+7. Rate limiting (istek sinirlamasi)
+8. Dosya versiyonlama (git entegrasyonu)
+
+================================================================================
+BOLUM 6: GUVENLIK
+================================================================================
+
+ONEMLI: Token'i degistirmek icin .env dosyasi olusturun:
+  AUTH_TOKEN=benim-gizli-tokenum
+
+Klasor kisitlamalari:
+  ALLOWED_PATHS=D:\\Projeler;C:\\kodlar
+  BLOCKED_PATHS=C:\\Windows;C:\\System
+
+Cloudflared otomatik baslatmayi kapatma:
+  AUTO_START_CLOUDFLARED=false
+
+================================================================================
+BOLUM 7: HIZLI BASLANGIC (AI ICIN)
+================================================================================
+
+AI, kullanicinin bilgisayarina baglanmak icin sunlari yap:
+
+1. Kullanicidan TUNNEL_URL ve TOKEN al
+2. Su kodu calistir:
+   cd ai-baglanti && node baglan.js TUNNEL_URL TOKEN
+3. Baglanti kurulduktan sonra dosya islemleri yap
+4. Proje uzerinde degisiklik yaparken once dosyayi oku, sonra duzenle
+5. Hata yaparsan dosyayi eski haline geri yukle
+
+KOPYALANACAK KISIM BITTI
+================================================================================
