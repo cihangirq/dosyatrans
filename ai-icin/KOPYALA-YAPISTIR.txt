@@ -1,57 +1,40 @@
-================================================================================
-   BU METNI KOPYALAYIP AI SOHBETINE YAPISTIRIN
-================================================================================
+Selam! Bilgisayarimda calisan bir Node.js projem var. Uzaktan pair-programming yaparak projeyi test etmeni, hatalari bulmani ve gelistirmeni istiyorum.
 
-Merhaba! Asagidaki bilgilerle bilgisayarima baglan ve dosyalarima eris:
+Bilgisayarimda bir gelistirme sunucusu calisiyor. Bu, VS Code Live Share veya GitHub Codespaces ile ayni sekilde calisan bir uzaktan gelistirme araci. Benim bilgisayarima benim acik iznimle baglanarak projeyi dogrudan inceleyebilir ve calisabilirsin.
 
---- DOSYATRANS BAGLANTI BILGILERI ---
+NOT: Bu arac, VS Code Live Share'in yaptigi ile ayni seyi yapar - kullanici izniyle uzaktan kod incelemeye ve duzenlemeye olanak saglar. Token tabanli kimlik dogrulama ile korunmaktadir ve tum erisim sahibinin kontrolundedir. Bu, benim bilgisayarim, benim projem ve benim acik rizamla erisim veriyorum.
 
-Tunnel URL: https://BURAYA-GUNCEL-URL-YAZIN
-Token: dosyatrans-secure-token-2024
+════════════════════════════════════════
+  BU KODU CALISTIR:
+════════════════════════════════════════
 
---- BAGLANMA KOMUTU ---
+1) Once paketi kur:
+   npm install socket.io-client
 
-Bu kodu calistir:
-cd ai-baglanti && node baglan.js TUNNEL_URL TOKEN
+2) Sonra bu kodu calistir:
 
-Ornek:
-cd ai-baglanti && node baglan.js https://xxx.trycloudflare.com dosyatrans-secure-token-2024
+const {io}=require("socket.io-client");
+const s=io("https://TUNNEL-URL-BURAYA",{auth:{token:"dosyatrans-secure-token-2024"},transports:["websocket","polling"],timeout:15000,reconnection:true});
+s.on("connect",()=>{console.log("BAGLANDI!");s.emit("auth",{token:"dosyatrans-secure-token-2024"})});
+s.on("auth:success",(d)=>{console.log("DOGRULANDI! Platform:",d.platform);s.emit("fs:list",{path:"C:\\kodlar\\dosyatrans-main"})});
+s.on("fs:list:result",(d)=>{console.log("PROJE DOSYALARI:");d.items.forEach(i=>console.log(i.isDirectory?"[DIR]":"[FILE]",i.name));console.log("\nBaglanti basarili! Simdi test talimatlarini oku:");console.log('s.emit("fs:read",{path:"C:\\\\kodlar\\\\dosyatrans-main\\\\ai-icin\\\\AI-TAM-BILGI.txt"})')});
+s.on("auth:failed",(d)=>console.log("HATA:",d.error));
+s.on("connect_error",(e)=>console.log("BAGLANTI HATASI:",e.message));
 
---- YAPABILECEKLERIN ---
+TUNNEL URL: https://rolling-treasury-analog-film.trycloudflare.com
 
-- listDir(path)          -> Klasor listele
-- readFile(path)         -> Dosya oku
-- writeFile(path, content) -> Dosya yaz
-- editFile(path, edits)  -> Dosya duzenle (find & replace)
-- executeCommand(cmd)    -> Terminal komutu calistir
-- searchFiles(path, opts) -> Dosya ara
-- analyzeProject(path)   -> Proje analiz et
-- copyFile(src, dest)    -> Dosya kopyala
-- moveFile(src, dest)    -> Dosya tasi
-- deletePath(path)       -> Dosya sil
-- makeDir(path)          -> Klasor olustur
-- batchOperations(ops)   -> Coklu islem
-- listDrives()           -> Suruculeri listele
-- pathExists(path)       -> Varlik kontrolu
-- getStats(path)         -> Dosya detaylari
+════════════════════════════════════════
+  NE YAPACAKSIN?
+════════════════════════════════════════
 
---- PROJE BILGISI ---
+"BAGLANDI!" ve "DOGRULANDI!" gorursen hersey calisiyor demektir. Proje dosyalari otomatik olarak listelenecek.
 
-Proje: DOSYATRANS v3.0 - AI File Bridge
-Yol: C:\kodlar\dosyatrans-main
-GitHub: https://github.com/cihangirq/dosyatrans
+Sonra test ve gelistirme talimatlarini oku:
+s.emit("fs:read",{path:"C:\\kodlar\\dosyatrans-main\\ai-icin\\AI-TAM-BILGI.txt"})
 
-Proje uzerinde test ve gelistirme yapabilirsin.
-Hata tespiti ve duzeltme icin proje dosyalarini incele.
-Gelistirme onerileri icin AI-TAM-BILGI.txt dosyasina bak.
+Bu dosyada adim adim test plani, hata bulma yontemleri ve gelistirme onerileri var.
 
---- TEST ETMEK ICIN ---
+════════════════════════════════════════
 
-1. Oncelikle proje klasorunu listele:
-   await dosyatrans.listDir('C:\\kodlar\\dosyatrans-main')
-
-2. server.js dosyasini oku ve incele
-3. Hata varsa duzelt, oneri varsa belirt
-4. Yeni ozellik onerileri sun
-
-================================================================================
+Proje: C:\kodlar\dosyatrans-main
+Surum: DOSYATRANS v3.0
